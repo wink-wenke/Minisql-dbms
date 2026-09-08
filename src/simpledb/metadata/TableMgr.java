@@ -1,8 +1,10 @@
 package simpledb.metadata;
 
 import java.util.*;
+import static java.sql.Types.*;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
+import simpledb.shared.*;
 
 /**
  * The table manager.
@@ -102,5 +104,67 @@ class TableMgr {
          }
       fcat.close();
       return new Layout(sch, offsets, size);
+   }
+
+   public boolean tableExists(String tblname, Transaction tx) {
+      TableScan tcat = new TableScan(tx, "tblcat", tcatLayout);
+      try {
+         while (tcat.next())
+            if (tcat.getString("tblname").equals(tblname))
+               return true;
+         return false;
+      }
+      finally {
+         tcat.close();
+      }
+   }
+
+   public boolean columnExists(String tblname, String fldname, Transaction tx) {
+      return getColumn(tblname, fldname, tx) != null;
+   }
+
+   public ColumnDef getColumn(String tblname, String fldname, Transaction tx) {
+      TableScan fcat = new TableScan(tx, "fldcat", fcatLayout);
+      try {
+         while (fcat.next()) {
+            if (fcat.getString("tblname").equals(tblname)
+                  && fcat.getString("fldname").equals(fldname)) {
+               int type = fcat.getInt("type");
+               int length = fcat.getInt("length");
+               return new ColumnDef(fldname, toColumnType(type), length);
+            }
+         }
+         return null;
+      }
+      finally {
+         fcat.close();
+      }
+   }
+
+   public List<ColumnDef> getColumns(String tblname, Transaction tx) {
+      List<ColumnDef> columns = new ArrayList<>();
+      TableScan fcat = new TableScan(tx, "fldcat", fcatLayout);
+      try {
+         while (fcat.next()) {
+            if (fcat.getString("tblname").equals(tblname)) {
+               String fldname = fcat.getString("fldname");
+               int type = fcat.getInt("type");
+               int length = fcat.getInt("length");
+               columns.add(new ColumnDef(fldname, toColumnType(type), length));
+            }
+         }
+         return columns;
+      }
+      finally {
+         fcat.close();
+      }
+   }
+
+   private ColumnType toColumnType(int sqlType) {
+      if (sqlType == INTEGER)
+         return ColumnType.INTEGER;
+      if (sqlType == VARCHAR)
+         return ColumnType.VARCHAR;
+      throw new IllegalArgumentException("unsupported SQL type: " + sqlType);
    }
 }

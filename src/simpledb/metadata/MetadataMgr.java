@@ -1,16 +1,20 @@
 package simpledb.metadata;
 
-import java.util.Map;
+import java.util.*;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
+import simpledb.engine.CatalogReader;
+import simpledb.shared.ColumnDef;
 
-public class MetadataMgr {
+public class MetadataMgr implements CatalogReader {
    private static TableMgr  tblmgr;
    private static ViewMgr   viewmgr;
    private static StatMgr   statmgr;
    private static IndexMgr  idxmgr;
+   private static Transaction catalogTx;
    
    public MetadataMgr(boolean isnew, Transaction tx) {
+      catalogTx = tx;
       tblmgr  = new TableMgr(isnew, tx);
       viewmgr = new ViewMgr(isnew, tblmgr, tx);
       statmgr = new StatMgr(tblmgr, tx);
@@ -43,5 +47,21 @@ public class MetadataMgr {
    
    public StatInfo getStatInfo(String tblname, Layout layout, Transaction tx) {
       return statmgr.getStatInfo(tblname, layout, tx);
+   }
+
+   public boolean tableExists(String tableName) {
+      return tblmgr.tableExists(tableName, catalogTx);
+   }
+
+   public boolean columnExists(String tableName, String columnName) {
+      return tblmgr.columnExists(tableName, columnName, catalogTx);
+   }
+
+   public ColumnDef getColumn(String tableName, String columnName) {
+      return tblmgr.getColumn(tableName, columnName, catalogTx);
+   }
+
+   public List<ColumnDef> getColumns(String tableName) {
+      return tblmgr.getColumns(tableName, catalogTx);
    }
 }
