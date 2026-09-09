@@ -103,6 +103,19 @@ public class CompilerE2ETest {
             check("ORDER BY 异常: " + e.getClass().getSimpleName(), false);
         }
 
+        // ===== GROUP BY =====
+        section("GROUP BY");
+        try {
+            Plan gp = planner.createQueryPlan("SELECT age, countofid FROM student GROUP BY age", tx);
+            Scan gs = gp.open();
+            int gcount = 0;
+            while (gs.next()) gcount++;
+            gs.close();
+            check("GROUP BY age 应返回4组, 实际=" + gcount, gcount == 4);
+        } catch (Exception e) {
+            check("GROUP BY 异常: " + e.getMessage(), false);
+        }
+
         // ===== Plan 可视化 =====
         section("Plan 可视化");
         Plan p = planner.createQueryPlan("SELECT id, name FROM student WHERE age > 18 AND id != 3", tx);
@@ -177,6 +190,39 @@ public class CompilerE2ETest {
         p = planner.createQueryPlan("SELECT * FROM student WHERE 1=1", tx);
         viz = Optimizer.visualize(p);
         check("WHERE 1=1 优化后无Filter: " + viz.trim(), !viz.contains("Filter"));
+
+        // ===== 算术表达式测试 =====
+        section("算术表达式");
+        try {
+            // 测试算术表达式在 WHERE 子句中的使用
+            // 注意：此时 Alice 已被删除，剩下 Bob(17), Charlie(22), David(19)
+            // age + 2 > 20 → age > 18，应返回 2 条 (Charlie:22, David:19)
+            count = countQuery(planner, tx, "SELECT id FROM student WHERE age + 2 > 20");
+            check("age + 2 > 20 应返回2条, 实际=" + count, count == 2);
+
+            // 测试乘法
+            // age * 2 > 40 → age > 20，应返回 1 条 (Charlie:22)
+            count = countQuery(planner, tx, "SELECT id FROM student WHERE age * 2 > 40");
+            check("age * 2 > 40 应返回1条, 实际=" + count, count == 1);
+
+            // 测试常量折叠
+            // age > 10 + 8 → age > 18，应返回 2 条 (Charlie:22, David:19)
+            count = countQuery(planner, tx, "SELECT id FROM student WHERE age > 10 + 8");
+            check("age > 10 + 8 (常量折叠) 应返回2条, 实际=" + count, count == 2);
+        } catch (Exception e) {
+            check("算术表达式异常: " + e.getMessage(), false);
+        }
+
+        // ===== Predicate Pushdown 测试 =====
+        section("Predicate Pushdown");
+        try {
+            p = planner.createQueryPlan("SELECT id, name FROM student WHERE age > 18", tx);
+            viz = Optimizer.visualize(p);
+            System.out.println("  " + viz.replace("\n", "\n  "));
+            check("Predicate Pushdown: Plan 包含 Filter", viz.contains("Filter"));
+        } catch (Exception e) {
+            check("Predicate Pushdown 异常: " + e.getMessage(), false);
+        }
 
         tx.commit();
         System.out.println("\n===== 测试结果 =====");

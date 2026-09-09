@@ -2,8 +2,11 @@ package simpledb.plan;
 
 import java.util.*;
 
-import simpledb.query.Predicate;
+import simpledb.query.*;
+import simpledb.record.Schema;
 import simpledb.materialize.SortPlan;
+import simpledb.materialize.GroupByPlan;
+import simpledb.materialize.AggregationFn;
 
 /**
  * 查询优化器。
@@ -44,6 +47,73 @@ public class Optimizer {
         }
         // 其他 Plan 类型暂不做结构优化
         return plan;
+    }
+
+    /**
+     * Projection Pruning：收集查询实际需要的字段集合。
+     * 从 ProjectPlan 向下传播，裁剪不需要的列。
+     */
+    public static Plan projectionPruning(Plan plan) {
+        if (plan instanceof ProjectPlan) {
+            ProjectPlan pp = (ProjectPlan) plan;
+            List<String> fields = pp.fields();
+            Plan optimizedChild = pruneFields(pp.child(), new java.util.HashSet<>(fields));
+            return new ProjectPlan(optimizedChild, fields);
+        }
+        // 没有 ProjectPlan 的情况（SELECT *），不做裁剪
+        return plan;
+    }
+
+    /**
+     * 递归裁剪子计划中不需要的字段。
+     * 只保留 parentFields 中引用的字段。
+     */
+    private static Plan pruneFields(Plan plan, java.util.Set<String> parentFields) {
+        if (plan instanceof SelectPlan) {
+            SelectPlan sp = (SelectPlan) plan;
+            // 收集谓词中引用的字段
+            java.util.Set<String> needed = new java.util.HashSet<>(parentFields);
+            for (Term t : sp.predicate().collectTerms()) {
+                collectExpressionFields(t.lhs(), needed);
+                collectExpressionFields(t.rhs(), needed);
+            }
+            Plan prunedChild = pruneFields(sp.child(), needed);
+            return new SelectPlan(prunedChild, sp.predicate());
+        }
+        if (plan instanceof SortPlan) {
+            SortPlan sp = (SortPlan) plan;
+            java.util.Set<String> needed = new java.util.HashSet<>(parentFields);
+            needed.addAll(sp.sortFields());
+            Plan prunedChild = pruneFields(sp.child(), needed);
+            return new SortPlan(sp.tx(), prunedChild, sp.sortFields());
+        }
+        if (plan instanceof GroupByPlan) {
+            GroupByPlan gp = (GroupByPlan) plan;
+            java.util.Set<String> needed = new java.util.HashSet<>(parentFields);
+            needed.addAll(gp.groupFields());
+            for (AggregationFn fn : gp.aggFunctions()) {
+                needed.add(fn.fieldName());
+            }
+            Plan prunedChild = pruneFields(gp.child(), needed);
+            // GroupByPlan 需要 Transaction 参数，但这里无法获取，返回原样
+            return plan;
+        }
+        if (plan instanceof TablePlan) {
+            // TablePlan 无法裁剪，返回原样
+            return plan;
+        }
+        if (plan instanceof ProductPlan) {
+            // ProductPlan 暂不裁剪（需要更复杂的分析）
+            return plan;
+        }
+        return plan;
+    }
+
+    /**
+     * 收集表达式中引用的字段名。
+     */
+    private static void collectExpressionFields(Expression expr, java.util.Set<String> fields) {
+        expr.collectFields(fields);
     }
 
     /**
@@ -126,6 +196,19 @@ public class Optimizer {
      * 将 Plan 节点转为简短描述。
      */
     private static String planToString(Plan plan) {
+        if (plan instanceof GroupByPlan) {
+            GroupByPlan gp = (GroupByPlan) plan;
+            StringBuilder sb = new StringBuilder("GroupBy" + gp.groupFields().toString());
+            if (!gp.aggFunctions().isEmpty()) {
+                sb.append(" [");
+                for (AggregationFn fn : gp.aggFunctions()) {
+                    sb.append(fn.fieldName()).append(", ");
+                }
+                sb.setLength(sb.length() - 2);
+                sb.append("]");
+            }
+            return sb.toString();
+        }
         if (plan instanceof SortPlan) {
             SortPlan sp = (SortPlan) plan;
             return "Sort" + sp.sortFields().toString();
@@ -153,7 +236,9 @@ public class Optimizer {
      */
     private static List<Plan> getChildren(Plan plan) {
         List<Plan> children = new ArrayList<>();
-        if (plan instanceof SortPlan) {
+        if (plan instanceof GroupByPlan) {
+            children.add(((GroupByPlan) plan).child());
+        } else if (plan instanceof SortPlan) {
             children.add(((SortPlan) plan).child());
         } else if (plan instanceof SelectPlan) {
             children.add(((SelectPlan) plan).child());

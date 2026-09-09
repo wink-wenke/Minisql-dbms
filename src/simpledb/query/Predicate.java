@@ -271,9 +271,14 @@ public class Predicate {
         switch (type) {
             case TERM:
                 // 1 = 1 形式 → TRUE
-                if (!term.lhs().isFieldName() && !term.rhs().isFieldName()
+                // 排除算术表达式（asConstant() 返回 null）
+                if (!term.lhs().isFieldName() && !term.lhs().isArithmetic()
+                        && !term.rhs().isFieldName() && !term.rhs().isArithmetic()
                         && term.op() == CompOp.EQUALS) {
-                    return term.lhs().asConstant().equals(term.rhs().asConstant());
+                    Constant lc = term.lhs().asConstant();
+                    Constant rc = term.rhs().asConstant();
+                    if (lc == null || rc == null) return false;
+                    return lc.equals(rc);
                 }
                 return false;
             case AND:
@@ -294,9 +299,12 @@ public class Predicate {
         switch (type) {
             case TERM:
                 // 两个常量之间的比较，结果确定 → 判断是否恒假
-                if (!term.lhs().isFieldName() && !term.rhs().isFieldName()) {
+                // 排除算术表达式（asConstant() 返回 null）
+                if (!term.lhs().isFieldName() && !term.lhs().isArithmetic()
+                        && !term.rhs().isFieldName() && !term.rhs().isArithmetic()) {
                     Constant lc = term.lhs().asConstant();
                     Constant rc = term.rhs().asConstant();
+                    if (lc == null || rc == null) return false;
                     boolean eq = lc.equals(rc);
                     int cmp = lc.compareTo(rc);
                     switch (term.op()) {
@@ -321,7 +329,7 @@ public class Predicate {
     }
 
     /**
-     * 简化谓词（常量折叠 + 布尔化简）。
+     * 简化谓词（常量折叠 + 布尔化简 + 算术表达式折叠）。
      * <ul>
      *   <li>TRUE AND x → x</li>
      *   <li>FALSE AND x → FALSE</li>
@@ -330,17 +338,24 @@ public class Predicate {
      *   <li>NOT TRUE → FALSE</li>
      *   <li>NOT FALSE → TRUE</li>
      *   <li>c=c → TRUE, c!=c → FALSE</li>
+     *   <li>age + 1 > 20 → 先折叠算术表达式</li>
      * </ul>
      */
     public Predicate simplify() {
         switch (type) {
-            case TERM:
+            case TERM: {
+                // 先简化 Term（折叠算术表达式）
+                Term simplifiedTerm = term.simplify();
+                Expression lhs = simplifiedTerm.lhs();
+                Expression rhs = simplifiedTerm.rhs();
+
                 // 常量折叠：c=c → TRUE, c!=c → FALSE
-                if (!term.lhs().isFieldName() && !term.rhs().isFieldName()) {
-                    Constant lc = term.lhs().asConstant();
-                    Constant rc = term.rhs().asConstant();
+                if (!lhs.isFieldName() && !lhs.isArithmetic()
+                        && !rhs.isFieldName() && !rhs.isArithmetic()) {
+                    Constant lc = lhs.asConstant();
+                    Constant rc = rhs.asConstant();
                     boolean eq = lc.equals(rc);
-                    switch (term.op()) {
+                    switch (simplifiedTerm.op()) {
                         case EQUALS:         return eq ? truePred() : falsePred();
                         case NOT_EQUALS:     return eq ? falsePred() : truePred();
                         case LESS:           return lc.compareTo(rc) < 0 ? truePred() : falsePred();
@@ -349,7 +364,13 @@ public class Predicate {
                         case GREATER_EQUALS: return lc.compareTo(rc) >= 0 ? truePred() : falsePred();
                     }
                 }
+
+                // 如果 Term 被简化了，返回新的 Predicate
+                if (!simplifiedTerm.toString().equals(term.toString())) {
+                    return new Predicate(simplifiedTerm);
+                }
                 return this;
+            }
             case AND: {
                 Predicate l = left.simplify();
                 Predicate r = right.simplify();

@@ -127,6 +127,15 @@ public class Term {
         return lhs.appliesTo(sch) && rhs.appliesTo(sch);
     }
 
+    /**
+     * 简化 Term：对表达式进行常量折叠。
+     */
+    public Term simplify() {
+        Expression simplifiedLhs = lhs.foldConstants();
+        Expression simplifiedRhs = rhs.foldConstants();
+        return new Term(simplifiedLhs, simplifiedRhs, op);
+    }
+
     public String toString() {
         return lhs.toString() + " " + op.symbol() + " " + rhs.toString();
     }

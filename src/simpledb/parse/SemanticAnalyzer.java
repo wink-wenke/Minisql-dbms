@@ -50,9 +50,9 @@ public class SemanticAnalyzer {
         // 1. 检查所有表是否存在，并收集 schema
         Schema combinedSchema = checkTablesAndGetSchema(data.tables());
 
-        // 2. 检查 SELECT 字段（排除 *）
+        // 2. 检查 SELECT 字段（排除 * 和聚合函数字段）
         for (String fld : data.fields()) {
-            if (!fld.equals("*") && !combinedSchema.hasField(fld)) {
+            if (!fld.equals("*") && !isAggField(fld) && !combinedSchema.hasField(fld)) {
                 throw new SemanticError(
                         "列 '" + fld + "' 不存在于表 " + data.tables());
             }
@@ -225,23 +225,39 @@ public class SemanticAnalyzer {
      * 获取表达式的类型。
      * 如果是字段引用，从 schema 中查找。
      * 如果是常量，根据值推断。
+     * 如果是算术表达式，检查操作数类型并返回结果类型。
      */
     private int getExpressionType(Expression expr, Schema schema) {
+        // 算术表达式
+        if (expr.isArithmetic()) {
+            int leftType = getExpressionType(expr.left(), schema);
+            int rightType = getExpressionType(expr.right(), schema);
+
+            // 算术运算要求两侧都是 INT
+            if (leftType != INTEGER || rightType != INTEGER) {
+                throw new SemanticError(
+                        "算术运算要求操作数为 INT 类型，但左侧是 " + typeName(leftType)
+                                + "，右侧是 " + typeName(rightType));
+            }
+            return INTEGER;
+        }
+
+        // 字段引用
         if (expr.isFieldName()) {
             String fldname = expr.asFieldName();
             if (!schema.hasField(fldname)) {
                 throw new SemanticError("列 '" + fldname + "' 不存在");
             }
             return schema.type(fldname);
-        } else {
-            // 常量：判断是 INT 还是 VARCHAR
-            Constant c = expr.asConstant();
-            try {
-                c.asInt();
-                return INTEGER;
-            } catch (Exception e) {
-                return VARCHAR;
-            }
+        }
+
+        // 常量：判断是 INT 还是 VARCHAR
+        Constant c = expr.asConstant();
+        try {
+            c.asInt();
+            return INTEGER;
+        } catch (Exception e) {
+            return VARCHAR;
         }
     }
 
@@ -262,6 +278,14 @@ public class SemanticAnalyzer {
                     "'" + tblname + "." + fldname + "' 期望 " + typeName(expectedType)
                             + "，但值 '" + val + "' 是 " + typeName(actualType));
         }
+    }
+
+    /**
+     * 判断是否为聚合函数字段（countofxxx, maxofxxx, minofxxx, sumofxxx）。
+     */
+    private boolean isAggField(String fld) {
+        return fld.startsWith("countof") || fld.startsWith("maxof")
+                || fld.startsWith("minof") || fld.startsWith("sumof");
     }
 
     /**

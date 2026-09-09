@@ -41,7 +41,7 @@ public class Planner {
 
     /**
      * 为 SELECT 语句创建执行计划。
-     * 流程：Parser → 语义分析 → 生成计划 → 优化
+     * 流程：Parser → 语义分析 → 生成计划 → 优化 → 投影裁剪
      */
     public Plan createQueryPlan(String qry, Transaction tx) {
         // 1. 语法分析
@@ -54,8 +54,11 @@ public class Planner {
         // 3. 生成计划
         Plan plan = qplanner.createPlan(data, tx);
 
-        // 4. 查询优化
+        // 4. 查询优化（常量折叠、布尔化简、冗余消除）
         plan = Optimizer.optimize(plan);
+
+        // 5. 投影裁剪（只保留需要的列）
+        plan = Optimizer.projectionPruning(plan);
 
         return plan;
     }

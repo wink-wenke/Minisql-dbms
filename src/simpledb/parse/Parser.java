@@ -4,6 +4,7 @@ import java.util.*;
 
 import simpledb.query.*;
 import simpledb.record.*;
+import simpledb.materialize.*;
 
 /**
  * SQL 语法分析器（递归下降）。
@@ -35,9 +36,57 @@ public class Parser {
 
     /**
      * 解析完整表达式（入口）。
-     * expression → or_expr
+     * expression → arith_expr
+     * <p>
+     * 支持算术运算：+ - * /
+     * 优先级：* / > + -
      */
     public Expression expression() {
+        return addExpr();
+    }
+
+    /**
+     * 解析加减表达式：term { (+|-) term }
+     */
+    private Expression addExpr() {
+        Expression left = mulExpr();
+        while (lex.match(TokenType.PLUS) || lex.match(TokenType.MINUS)) {
+            Token op = lex.next();
+            Expression right = mulExpr();
+            Expression.ArithOp arithOp = (op.type() == TokenType.PLUS)
+                    ? Expression.ArithOp.PLUS
+                    : Expression.ArithOp.MINUS;
+            left = new Expression(left, right, arithOp);
+        }
+        return left;
+    }
+
+    /**
+     * 解析乘除表达式：primary { (*|/) primary }
+     */
+    private Expression mulExpr() {
+        Expression left = primaryExpr();
+        while (lex.match(TokenType.STAR) || lex.match(TokenType.DIVIDE)) {
+            Token op = lex.next();
+            Expression right = primaryExpr();
+            Expression.ArithOp arithOp = (op.type() == TokenType.STAR)
+                    ? Expression.ArithOp.MULTIPLY
+                    : Expression.ArithOp.DIVIDE;
+            left = new Expression(left, right, arithOp);
+        }
+        return left;
+    }
+
+    /**
+     * 解析基本表达式：IDENTIFIER | constant | '(' expression ')'
+     */
+    private Expression primaryExpr() {
+        if (lex.match(TokenType.LPAREN)) {
+            lex.eat(TokenType.LPAREN);
+            Expression expr = expression();
+            lex.eat(TokenType.RPAREN);
+            return expr;
+        }
         if (lex.matchId())
             return new Expression(field());
         else
@@ -171,12 +220,20 @@ public class Parser {
     public QueryData query() {
         lex.eatKeyword("select");
         List<String> fields = selectList();
+        List<AggregationFn> aggfns = new ArrayList<>();
         lex.eatKeyword("from");
         Collection<String> tables = tableList();
         Predicate pred = new Predicate();
         if (lex.matchKeyword("where")) {
             lex.eatKeyword("where");
             pred = predicate();
+        }
+        List<String> groupby = Collections.emptyList();
+        if (lex.matchKeyword("group")) {
+            lex.eatKeyword("group");
+            lex.eatKeyword("by");
+            groupby = fieldList();
+            aggfns = extractAggFns(fields, groupby);
         }
         List<String> orderby = Collections.emptyList();
         if (lex.matchKeyword("order")) {
@@ -185,7 +242,7 @@ public class Parser {
             orderby = fieldList();
         }
         consumeEnd();
-        return new QueryData(fields, tables, pred, orderby);
+        return new QueryData(fields, tables, pred, orderby, groupby, aggfns);
     }
 
     private List<String> selectList() {
@@ -212,6 +269,32 @@ public class Parser {
             L.add(lex.eatId());
         }
         return L;
+    }
+
+    /**
+     * 从 SELECT 字段列表中提取聚合函数。
+     * 将 COUNT(xxx) / MAX(xxx) 等替换为对应的聚合字段名（countofxxx, maxofxxx）。
+     */
+    private List<AggregationFn> extractAggFns(List<String> fields, List<String> groupby) {
+        List<AggregationFn> fns = new ArrayList<>();
+        for (int i = 0; i < fields.size(); i++) {
+            String fld = fields.get(i);
+            String srcField;
+            if (fld.startsWith("countof")) {
+                srcField = fld.substring(7);
+                if (!groupby.contains(srcField)) fns.add(new CountFn(srcField));
+            } else if (fld.startsWith("maxof")) {
+                srcField = fld.substring(5);
+                if (!groupby.contains(srcField)) fns.add(new MaxFn(srcField));
+            } else if (fld.startsWith("minof")) {
+                srcField = fld.substring(5);
+                if (!groupby.contains(srcField)) fns.add(new MinFn(srcField));
+            } else if (fld.startsWith("sumof")) {
+                srcField = fld.substring(5);
+                if (!groupby.contains(srcField)) fns.add(new SumFn(srcField));
+            }
+        }
+        return fns;
     }
 
     // =================================================================

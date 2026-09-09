@@ -5,6 +5,7 @@ import simpledb.tx.Transaction;
 import simpledb.record.Schema;
 import simpledb.plan.Plan;
 import simpledb.query.*;
+import static java.sql.Types.*;
 
 /**
  * The Plan class for the <i>groupby</i> operator.
@@ -16,56 +17,47 @@ public class GroupByPlan implements Plan {
    private List<AggregationFn> aggfns;
    private Schema sch = new Schema();
    
-   /**
-    * Create a groupby plan for the underlying query.
-    * The grouping is determined by the specified
-    * collection of group fields,
-    * and the aggregation is computed by the
-    * specified collection of aggregation functions.
-    * @param p a plan for the underlying query
-    * @param groupfields the group fields
-    * @param aggfns the aggregation functions
-    * @param tx the calling transaction
-    */
    public GroupByPlan(Transaction tx, Plan p, List<String> groupfields, List<AggregationFn> aggfns) {
       this.p = new SortPlan(tx, p, groupfields);
       this.groupfields = groupfields;
       this.aggfns = aggfns;
       for (String fldname : groupfields)
          sch.add(fldname, p.schema());
-      for (AggregationFn fn : aggfns)
-         sch.addIntField(fn.fieldName());
+      for (AggregationFn fn : aggfns) {
+         String srcField = extractSourceField(fn.fieldName());
+         if (fn instanceof CountFn || fn instanceof SumFn) {
+            sch.addIntField(fn.fieldName());
+         } else if (p.schema().hasField(srcField)) {
+            int type = p.schema().type(srcField);
+            int length = p.schema().length(srcField);
+            sch.addField(fn.fieldName(), type, length);
+         } else {
+            sch.addIntField(fn.fieldName());
+         }
+      }
+   }
+
+   /**
+    * 从聚合字段名中提取源字段名。
+    * countofid → id, maxofname → name
+    */
+   private String extractSourceField(String aggFieldName) {
+      if (aggFieldName.startsWith("countof")) return aggFieldName.substring(7);
+      if (aggFieldName.startsWith("maxof"))   return aggFieldName.substring(5);
+      if (aggFieldName.startsWith("minof"))   return aggFieldName.substring(5);
+      if (aggFieldName.startsWith("sumof"))   return aggFieldName.substring(5);
+      return aggFieldName;
    }
    
-   /**
-    * This method opens a sort plan for the specified plan.
-    * The sort plan ensures that the underlying records
-    * will be appropriately grouped.
-    * @see simpledb.plan.Plan#open()
-    */
    public Scan open() {
       Scan s = p.open();
       return new GroupByScan(s, groupfields, aggfns);
    }
    
-   /**
-    * Return the number of blocks required to
-    * compute the aggregation,
-    * which is one pass through the sorted table.
-    * It does <i>not</i> include the one-time cost
-    * of materializing and sorting the records.
-    * @see simpledb.plan.Plan#blocksAccessed()
-    */
    public int blocksAccessed() {
       return p.blocksAccessed();
    }
    
-   /**
-    * Return the number of groups.  Assuming equal distribution,
-    * this is the product of the distinct values
-    * for each grouping field.
-    * @see simpledb.plan.Plan#recordsOutput()
-    */
    public int recordsOutput() {
       int numgroups = 1;
       for (String fldname : groupfields)
@@ -73,15 +65,6 @@ public class GroupByPlan implements Plan {
       return numgroups;
    }
    
-   /**
-    * Return the number of distinct values for the
-    * specified field.  If the field is a grouping field,
-    * then the number of distinct values is the same
-    * as in the underlying query.
-    * If the field is an aggregate field, then we
-    * assume that all values are distinct.
-    * @see simpledb.plan.Plan#distinctValues(java.lang.String)
-    */
    public int distinctValues(String fldname) {
       if (p.schema().hasField(fldname))
          return p.distinctValues(fldname);
@@ -89,13 +72,11 @@ public class GroupByPlan implements Plan {
          return recordsOutput();
    }
    
-   /**
-    * Returns the schema of the output table.
-    * The schema consists of the group fields,
-    * plus one field for each aggregation function.
-    * @see simpledb.plan.Plan#schema()
-    */
    public Schema schema() {
       return sch;
    }
+
+   public Plan child() { return p; }
+   public List<String> groupFields() { return groupfields; }
+   public List<AggregationFn> aggFunctions() { return aggfns; }
 }
