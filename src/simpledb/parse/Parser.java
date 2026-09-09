@@ -178,6 +178,7 @@ public class Parser {
             lex.eatKeyword("where");
             pred = predicate();
         }
+        consumeEnd();
         return new QueryData(fields, tables, pred);
     }
 
@@ -205,6 +206,23 @@ public class Parser {
             L.add(lex.eatId());
         }
         return L;
+    }
+
+    // =================================================================
+    //  语句结束检查
+    // =================================================================
+
+    /**
+     * 消费语句末尾的分号（如果有）。
+     * 如果后面还有未消费的非 EOF token，抛出语法错误。
+     */
+    private void consumeEnd() {
+        if (lex.match(TokenType.SEMICOLON)) {
+            lex.eat(TokenType.SEMICOLON);
+        }
+        if (lex.peek().type() != TokenType.EOF) {
+            throw lex.syntaxError("语句末尾有多余内容: '" + lex.peek().lexeme() + "'");
+        }
     }
 
     // =================================================================
@@ -248,6 +266,7 @@ public class Parser {
             lex.eatKeyword("where");
             pred = predicate();
         }
+        consumeEnd();
         return new DeleteData(tblname, pred);
     }
 
@@ -266,6 +285,7 @@ public class Parser {
         lex.eatDelim('(');
         List<Constant> vals = constList();
         lex.eatDelim(')');
+        consumeEnd();
         return new InsertData(tblname, flds, vals);
     }
 
@@ -305,6 +325,7 @@ public class Parser {
             lex.eatKeyword("where");
             pred = predicate();
         }
+        consumeEnd();
         return new ModifyData(tblname, fldname, newval, pred);
     }
 
@@ -318,6 +339,7 @@ public class Parser {
         lex.eatDelim('(');
         Schema sch = fieldDefs();
         lex.eatDelim(')');
+        consumeEnd();
         return new CreateTableData(tblname, sch);
     }
 
@@ -359,6 +381,7 @@ public class Parser {
         String viewname = lex.eatId();
         lex.eatKeyword("as");
         QueryData qd = query();
+        consumeEnd();
         return new CreateViewData(viewname, qd);
     }
 
@@ -370,6 +393,7 @@ public class Parser {
         lex.eatDelim('(');
         String fldname = field();
         lex.eatDelim(')');
+        consumeEnd();
         return new CreateIndexData(idxname, tblname, fldname);
     }
 

@@ -3,6 +3,7 @@ package simpledb.parse;
 import simpledb.metadata.MetadataMgr;
 import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
+import java.io.File;
 
 /**
  * SemanticAnalyzer 测试。
@@ -25,6 +26,7 @@ public class SemanticAnalyzerTest {
         System.out.println("===== SemanticAnalyzer 测试开始 =====\n");
 
         // 初始化数据库
+        deleteDir("semantictest");
         SimpleDB db = new SimpleDB("semantictest");
         Transaction tx = db.newTx();
         MetadataMgr mdm = db.mdMgr();
@@ -206,6 +208,20 @@ public class SemanticAnalyzerTest {
 
     static void section(String name) {
         System.out.println("[" + name + "]");
+    }
+
+    static void deleteDir(String path) {
+        File dir = new File(path);
+        if (dir.exists()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    if (f.isDirectory()) deleteDir(f.getPath());
+                    else f.delete();
+                }
+            }
+            dir.delete();
+        }
     }
 
     static void check(String desc, boolean condition) {

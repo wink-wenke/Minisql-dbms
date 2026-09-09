@@ -4,6 +4,7 @@ import simpledb.plan.*;
 import simpledb.query.Scan;
 import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
+import java.io.File;
 
 /**
  * 编译器模块端到端测试。
@@ -28,6 +29,9 @@ public class CompilerE2ETest {
 
     public static void main(String[] args) {
         System.out.println("===== 编译器端到端测试 =====\n");
+
+        // 清除上次运行的数据库目录，确保干净环境
+        deleteDir("e2etest");
 
         SimpleDB db = new SimpleDB("e2etest");
         Transaction tx = db.newTx();
@@ -191,6 +195,23 @@ public class CompilerE2ETest {
         } else {
             failed++;
             System.out.println("  [FAIL] " + desc);
+        }
+    }
+
+    /**
+     * 递归删除目录（用于清理上次运行的数据库）。
+     */
+    static void deleteDir(String path) {
+        File dir = new File(path);
+        if (dir.exists()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    if (f.isDirectory()) deleteDir(f.getPath());
+                    else f.delete();
+                }
+            }
+            dir.delete();
         }
     }
 }

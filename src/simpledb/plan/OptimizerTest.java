@@ -3,6 +3,7 @@ package simpledb.plan;
 import simpledb.query.*;
 import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
+import java.io.File;
 
 /**
  * Optimizer 测试。
@@ -101,6 +102,7 @@ public class OptimizerTest {
     static void testPlanOptimization() {
         section("Plan 优化（需要数据库环境）");
 
+        deleteDir("optimizertest");
         SimpleDB db = new SimpleDB("optimizertest");
         Transaction tx = db.newTx();
         db.planner().executeUpdate("CREATE TABLE T1(A INT, B VARCHAR(20))", tx);
@@ -134,6 +136,7 @@ public class OptimizerTest {
     static void testPlanVisualization() {
         section("Plan 可视化");
 
+        deleteDir("visualtest");
         SimpleDB db = new SimpleDB("visualtest");
         Transaction tx = db.newTx();
         db.planner().executeUpdate("CREATE TABLE student(id INT, name VARCHAR(20), age INT)", tx);
@@ -159,6 +162,20 @@ public class OptimizerTest {
 
     static void section(String name) {
         System.out.println("[" + name + "]");
+    }
+
+    static void deleteDir(String path) {
+        File dir = new File(path);
+        if (dir.exists()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    if (f.isDirectory()) deleteDir(f.getPath());
+                    else f.delete();
+                }
+            }
+            dir.delete();
+        }
     }
 
     static void check(String desc, boolean condition) {

@@ -90,6 +90,41 @@ public class Planner {
     }
 
     /**
+     * EXPLAIN 命令：显示 SELECT 语句的执行计划（不执行查询）。
+     * 返回优化前后的 Plan 树形结构。
+     */
+    public String explain(String qry, Transaction tx) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("SQL: ").append(qry).append("\n\n");
+
+        // 1. 语法分析
+        Parser parser = new Parser(qry);
+        QueryData data = parser.query();
+
+        // 2. 语义分析
+        verifyQuery(data, tx);
+
+        // 3. 生成原始计划
+        Plan rawPlan = qplanner.createPlan(data, tx);
+
+        // 4. 优化后的计划
+        Plan optPlan = Optimizer.optimize(rawPlan);
+
+        // 5. 输出对比
+        sb.append("=== 优化前 ===\n");
+        sb.append(Optimizer.visualize(rawPlan));
+        sb.append("\n=== 优化后 ===\n");
+        sb.append(Optimizer.visualize(optPlan));
+
+        // 6. 基本统计
+        sb.append("\n=== 统计信息 ===\n");
+        sb.append("预估块访问: ").append(optPlan.blocksAccessed()).append("\n");
+        sb.append("预估输出行: ").append(optPlan.recordsOutput()).append("\n");
+
+        return sb.toString();
+    }
+
+    /**
      * 对 SELECT 语句做语义验证。
      */
     private void verifyQuery(QueryData data, Transaction tx) {
