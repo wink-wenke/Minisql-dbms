@@ -59,7 +59,7 @@ public class SimpleDB {
       UpdatePlanner up = new BasicUpdatePlanner(mdm);
 //    QueryPlanner qp = new HeuristicQueryPlanner(mdm);
 //    UpdatePlanner up = new IndexUpdatePlanner(mdm);
-      planner = new Planner(qp, up);
+      planner = new Planner(qp, up, mdm);
       tx.commit();
    }
    
