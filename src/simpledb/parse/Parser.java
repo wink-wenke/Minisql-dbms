@@ -178,8 +178,14 @@ public class Parser {
             lex.eatKeyword("where");
             pred = predicate();
         }
+        List<String> orderby = Collections.emptyList();
+        if (lex.matchKeyword("order")) {
+            lex.eatKeyword("order");
+            lex.eatKeyword("by");
+            orderby = fieldList();
+        }
         consumeEnd();
-        return new QueryData(fields, tables, pred);
+        return new QueryData(fields, tables, pred, orderby);
     }
 
     private List<String> selectList() {

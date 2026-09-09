@@ -9,7 +9,7 @@ public enum TokenType {
     SELECT, FROM, WHERE, AND, OR, NOT,
     INSERT, INTO, VALUES,
     DELETE, UPDATE, SET,
-    CREATE, TABLE, VIEW, AS, INDEX, ON,
+    CREATE, TABLE, VIEW, AS, INDEX, ON, ORDER, BY,
     INT, VARCHAR,
     NULL,
 

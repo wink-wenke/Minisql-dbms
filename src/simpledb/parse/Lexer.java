@@ -25,7 +25,7 @@ public class Lexer {
             "insert", "into", "values",
             "delete", "update", "set",
             "create", "table", "view", "as", "index", "on",
-            "int", "varchar", "null"
+            "int", "varchar", "null", "order", "by"
     ));
 
     // 关键字字符串 -> TokenType 的映射
@@ -52,6 +52,8 @@ public class Lexer {
         KEYWORD_MAP.put("int",      TokenType.INT);
         KEYWORD_MAP.put("varchar",  TokenType.VARCHAR);
         KEYWORD_MAP.put("null",     TokenType.NULL);
+        KEYWORD_MAP.put("order",    TokenType.ORDER);
+        KEYWORD_MAP.put("by",       TokenType.BY);
     }
 
     // ==================== 源文本与扫描状态 ====================

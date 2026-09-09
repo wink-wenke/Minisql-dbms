@@ -93,6 +93,16 @@ public class CompilerE2ETest {
         count = countQuery(planner, tx, "SELECT * FROM student");
         check("SELECT * 应返回4条, 实际=" + count, count == 4);
 
+        // ===== ORDER BY =====
+        section("ORDER BY");
+        try {
+            count = countQuery(planner, tx, "SELECT id, name FROM student ORDER BY age");
+            check("ORDER BY age 应返回4条, 实际=" + count, count == 4);
+        } catch (Exception e) {
+            e.printStackTrace();
+            check("ORDER BY 异常: " + e.getClass().getSimpleName(), false);
+        }
+
         // ===== Plan 可视化 =====
         section("Plan 可视化");
         Plan p = planner.createQueryPlan("SELECT id, name FROM student WHERE age > 18 AND id != 3", tx);

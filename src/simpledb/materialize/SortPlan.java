@@ -128,16 +128,16 @@ public class SortPlan implements Plan {
       boolean hasmore2 = src2.next();
       while (hasmore1 && hasmore2)
          if (comp.compare(src1, src2) < 0)
-         hasmore1 = copy(src1, dest);
-      else
-         hasmore2 = copy(src2, dest);
+            hasmore1 = copy(src1, dest);
+         else
+            hasmore2 = copy(src2, dest);
       
       if (hasmore1)
          while (hasmore1)
-         hasmore1 = copy(src1, dest);
+            hasmore1 = copy(src1, dest);
       else
          while (hasmore2)
-         hasmore2 = copy(src2, dest);
+            hasmore2 = copy(src2, dest);
       src1.close();
       src2.close();
       dest.close();
@@ -150,4 +150,13 @@ public class SortPlan implements Plan {
          dest.setVal(fldname, src.getVal(fldname));
       return src.next();
    }
+
+   /** 返回底层计划（供优化器使用）。 */
+   public Plan child() { return p; }
+
+   /** 返回事务（供优化器重建使用）。 */
+   public Transaction tx() { return tx; }
+
+   /** 返回排序字段列表（供可视化使用）。 */
+   public List<String> sortFields() { return comp.sortFields(); }
 }

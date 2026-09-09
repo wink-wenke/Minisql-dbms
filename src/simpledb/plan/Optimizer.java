@@ -3,6 +3,7 @@ package simpledb.plan;
 import java.util.*;
 
 import simpledb.query.Predicate;
+import simpledb.materialize.SortPlan;
 
 /**
  * 查询优化器。
@@ -35,6 +36,11 @@ public class Optimizer {
         }
         if (plan instanceof ProjectPlan) {
             return optimizeProject((ProjectPlan) plan);
+        }
+        if (plan instanceof SortPlan) {
+            SortPlan sp = (SortPlan) plan;
+            Plan optimizedChild = applyRules(sp.child());
+            return new SortPlan(((SortPlan) plan).tx(), optimizedChild, sp.sortFields());
         }
         // 其他 Plan 类型暂不做结构优化
         return plan;
@@ -120,6 +126,10 @@ public class Optimizer {
      * 将 Plan 节点转为简短描述。
      */
     private static String planToString(Plan plan) {
+        if (plan instanceof SortPlan) {
+            SortPlan sp = (SortPlan) plan;
+            return "Sort" + sp.sortFields().toString();
+        }
         if (plan instanceof SelectPlan) {
             SelectPlan sp = (SelectPlan) plan;
             return "Filter[" + sp.predicate().toString() + "]";
@@ -143,7 +153,9 @@ public class Optimizer {
      */
     private static List<Plan> getChildren(Plan plan) {
         List<Plan> children = new ArrayList<>();
-        if (plan instanceof SelectPlan) {
+        if (plan instanceof SortPlan) {
+            children.add(((SortPlan) plan).child());
+        } else if (plan instanceof SelectPlan) {
             children.add(((SelectPlan) plan).child());
         } else if (plan instanceof ProjectPlan) {
             children.add(((ProjectPlan) plan).child());
