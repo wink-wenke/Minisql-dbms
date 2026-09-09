@@ -50,8 +50,11 @@ public class BetterQueryPlanner implements QueryPlanner {
       //Step 3: Add a selection plan for the predicate
       p = new SelectPlan(p, data.pred());
       
-      //Step 4: Project on the field names
-      p = new ProjectPlan(p, data.fields());
+      //Step 4: Project on the field names (skip for SELECT *)
+      List<String> fields = data.fields();
+      if (!(fields.size() == 1 && fields.get(0).equals("*"))) {
+         p = new ProjectPlan(p, fields);
+      }
       return p;
    }
 }

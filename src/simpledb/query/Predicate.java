@@ -260,6 +260,152 @@ public class Predicate {
         }
     }
 
+    // ==================== 优化辅助 ====================
+
+    /**
+     * 判断此谓词是否为恒真（TRUE）。
+     * TERM 节点中 lhs == rhs 且为常量 → TRUE
+     * 空谓词（默认构造）→ TRUE
+     */
+    public boolean isAlwaysTrue() {
+        switch (type) {
+            case TERM:
+                // 1 = 1 形式 → TRUE
+                if (!term.lhs().isFieldName() && !term.rhs().isFieldName()
+                        && term.op() == CompOp.EQUALS) {
+                    return term.lhs().asConstant().equals(term.rhs().asConstant());
+                }
+                return false;
+            case AND:
+                return left.isAlwaysTrue() && right.isAlwaysTrue();
+            case OR:
+                return left.isAlwaysTrue() || right.isAlwaysTrue();
+            case NOT:
+                return left.isAlwaysFalse();
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * 判断此谓词是否为恒假（FALSE）。
+     */
+    public boolean isAlwaysFalse() {
+        switch (type) {
+            case TERM:
+                // 两个常量之间的比较，结果确定 → 判断是否恒假
+                if (!term.lhs().isFieldName() && !term.rhs().isFieldName()) {
+                    Constant lc = term.lhs().asConstant();
+                    Constant rc = term.rhs().asConstant();
+                    boolean eq = lc.equals(rc);
+                    int cmp = lc.compareTo(rc);
+                    switch (term.op()) {
+                        case EQUALS:         return !eq;
+                        case NOT_EQUALS:     return eq;
+                        case LESS:           return cmp >= 0;
+                        case LESS_EQUALS:    return cmp > 0;
+                        case GREATER:        return cmp <= 0;
+                        case GREATER_EQUALS: return cmp < 0;
+                    }
+                }
+                return false;
+            case AND:
+                return left.isAlwaysFalse() || right.isAlwaysFalse();
+            case OR:
+                return left.isAlwaysFalse() && right.isAlwaysFalse();
+            case NOT:
+                return left.isAlwaysTrue();
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * 简化谓词（常量折叠 + 布尔化简）。
+     * <ul>
+     *   <li>TRUE AND x → x</li>
+     *   <li>FALSE AND x → FALSE</li>
+     *   <li>TRUE OR x → TRUE</li>
+     *   <li>FALSE OR x → x</li>
+     *   <li>NOT TRUE → FALSE</li>
+     *   <li>NOT FALSE → TRUE</li>
+     *   <li>c=c → TRUE, c!=c → FALSE</li>
+     * </ul>
+     */
+    public Predicate simplify() {
+        switch (type) {
+            case TERM:
+                // 常量折叠：c=c → TRUE, c!=c → FALSE
+                if (!term.lhs().isFieldName() && !term.rhs().isFieldName()) {
+                    Constant lc = term.lhs().asConstant();
+                    Constant rc = term.rhs().asConstant();
+                    boolean eq = lc.equals(rc);
+                    switch (term.op()) {
+                        case EQUALS:         return eq ? truePred() : falsePred();
+                        case NOT_EQUALS:     return eq ? falsePred() : truePred();
+                        case LESS:           return lc.compareTo(rc) < 0 ? truePred() : falsePred();
+                        case LESS_EQUALS:    return lc.compareTo(rc) <= 0 ? truePred() : falsePred();
+                        case GREATER:        return lc.compareTo(rc) > 0 ? truePred() : falsePred();
+                        case GREATER_EQUALS: return lc.compareTo(rc) >= 0 ? truePred() : falsePred();
+                    }
+                }
+                return this;
+            case AND: {
+                Predicate l = left.simplify();
+                Predicate r = right.simplify();
+                if (l.isAlwaysTrue()) return r;
+                if (r.isAlwaysTrue()) return l;
+                if (l.isAlwaysFalse()) return falsePred();
+                if (r.isAlwaysFalse()) return falsePred();
+                return and(l, r);
+            }
+            case OR: {
+                Predicate l = left.simplify();
+                Predicate r = right.simplify();
+                if (l.isAlwaysTrue()) return truePred();
+                if (r.isAlwaysTrue()) return truePred();
+                if (l.isAlwaysFalse()) return r;
+                if (r.isAlwaysFalse()) return l;
+                return or(l, r);
+            }
+            case NOT: {
+                Predicate c = left.simplify();
+                if (c.isAlwaysTrue()) return falsePred();
+                if (c.isAlwaysFalse()) return truePred();
+                return not(c);
+            }
+            default:
+                return this;
+        }
+    }
+
+    /**
+     * 返回恒真谓词。
+     */
+    public static Predicate truePred() {
+        return new Predicate(new Term(
+                new Expression(new Constant(1)),
+                new Expression(new Constant(1)),
+                CompOp.EQUALS));
+    }
+
+    /**
+     * 返回恒假谓词。
+     */
+    public static Predicate falsePred() {
+        return new Predicate(new Term(
+                new Expression(new Constant(1)),
+                new Expression(new Constant(0)),
+                CompOp.EQUALS));
+    }
+
+    /**
+     * 判断是否为 SELECT * 的投影（字段列表只有 "*"）。
+     */
+    public static boolean isSelectAll(List<String> fields) {
+        return fields.size() == 1 && fields.get(0).equals("*");
+    }
+
     // ==================== toString ====================
 
     public String toString() {

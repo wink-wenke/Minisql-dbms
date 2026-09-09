@@ -83,4 +83,10 @@ public class SelectPlan implements Plan {
    public Schema schema() {
       return p.schema();
    }
+
+    /** 返回过滤谓词（供优化器使用）。 */
+    public Predicate predicate() { return pred; }
+
+    /** 返回子计划（供优化器使用）。 */
+    public Plan child() { return p; }
 }

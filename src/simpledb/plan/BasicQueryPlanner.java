@@ -16,17 +16,12 @@ public class BasicQueryPlanner implements QueryPlanner {
       this.mdm = mdm;
    }
    
-   /**
-    * Creates a query plan as follows.  It first takes
-    * the product of all tables and views; it then selects on the predicate;
-    * and finally it projects on the field list. 
-    */
    public Plan createPlan(QueryData data, Transaction tx) {
       //Step 1: Create a plan for each mentioned table or view.
      List<Plan> plans = new ArrayList<>();
       for (String tblname : data.tables()) {
          String viewdef = mdm.getViewDef(tblname, tx);
-         if (viewdef != null) { // Recursively plan the view.
+         if (viewdef != null) {
             Parser parser = new Parser(viewdef);
             QueryData viewdata = parser.query();
             plans.add(createPlan(viewdata, tx));
@@ -43,8 +38,11 @@ public class BasicQueryPlanner implements QueryPlanner {
       //Step 3: Add a selection plan for the predicate
       p = new SelectPlan(p, data.pred());
       
-      //Step 4: Project on the field names
-      p = new ProjectPlan(p, data.fields());
+      //Step 4: Project on the field names (skip for SELECT *)
+      List<String> fields = data.fields();
+      if (!(fields.size() == 1 && fields.get(0).equals("*"))) {
+         p = new ProjectPlan(p, fields);
+      }
       return p;
    }
 }

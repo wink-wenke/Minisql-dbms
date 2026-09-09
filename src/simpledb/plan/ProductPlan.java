@@ -76,4 +76,10 @@ public class ProductPlan implements Plan {
    public Schema schema() {
       return schema;
    }
+
+    /** 返回左子计划（供优化器使用）。 */
+    public Plan left() { return p1; }
+
+    /** 返回右子计划（供优化器使用）。 */
+    public Plan right() { return p2; }
 }
