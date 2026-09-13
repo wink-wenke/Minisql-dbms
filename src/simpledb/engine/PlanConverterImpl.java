@@ -18,6 +18,8 @@ public class PlanConverterImpl implements PlanConverter {
    public Plan convert(LogicalPlan plan, Transaction tx) {
       if (plan instanceof SeqScanPlan) {
          SeqScanPlan scan = (SeqScanPlan) plan;
+         if (!metadataMgr.tableExists(scan.tableName(), tx))
+            throw EngineException.tableNotFound(scan.tableName());
          return new TablePlan(tx, scan.tableName(), metadataMgr);
       }
       if (plan instanceof FilterPlan) {
@@ -28,7 +30,6 @@ public class PlanConverterImpl implements PlanConverter {
          simpledb.logical.ProjectPlan project = (simpledb.logical.ProjectPlan) plan;
          return new simpledb.plan.ProjectPlan(convert(project.child(), tx), project.columns());
       }
-      throw new IllegalArgumentException("logical plan cannot be converted to query plan: "
-            + plan.getClass().getSimpleName());
+      throw EngineException.planConversion(plan.getClass().getSimpleName());
    }
 }

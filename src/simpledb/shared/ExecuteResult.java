@@ -12,17 +12,28 @@ public class ExecuteResult {
       UPDATE
    }
 
-   private ResultType type;
-   private List<String> columnNames;
-   private List<List<Constant>> rows;
-   private int affectedRows;
+   private final ResultType type;
+   private final List<String> columnNames;
+   private final List<List<Constant>> rows;
+   private final int affectedRows;
 
    private ExecuteResult(ResultType type, List<String> columnNames,
                          List<List<Constant>> rows, int affectedRows) {
       this.type = type;
-      this.columnNames = columnNames;
-      this.rows = rows;
+      this.columnNames = Collections.unmodifiableList(new ArrayList<>(columnNames));
+      this.rows = deepCopy(rows);
       this.affectedRows = affectedRows;
+   }
+
+   /**
+    * Copies the row list and every row in it, so a caller cannot reach back
+    * into the engine's result and change what the next reader sees.
+    */
+   private static List<List<Constant>> deepCopy(List<List<Constant>> rows) {
+      List<List<Constant>> copy = new ArrayList<>();
+      for (List<Constant> row : rows)
+         copy.add(Collections.unmodifiableList(new ArrayList<>(row)));
+      return Collections.unmodifiableList(copy);
    }
 
    public static ExecuteResult queryResult(List<String> columns, List<List<Constant>> rows) {
@@ -38,10 +49,18 @@ public class ExecuteResult {
       return type;
    }
 
+   /**
+    * Column names of a query result, or an empty list for an update result.
+    * The returned list is an unmodifiable view.
+    */
    public List<String> getColumnNames() {
       return columnNames;
    }
 
+   /**
+    * Rows of a query result. The returned list and every row inside it are
+    * unmodifiable views.
+    */
    public List<List<Constant>> getRows() {
       return rows;
    }

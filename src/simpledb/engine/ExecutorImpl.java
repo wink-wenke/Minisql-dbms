@@ -5,22 +5,41 @@ import simpledb.logical.*;
 import simpledb.metadata.MetadataMgr;
 import simpledb.plan.Plan;
 import simpledb.query.*;
-import simpledb.record.Schema;
 import simpledb.shared.*;
 import simpledb.tx.Transaction;
 
 /**
  * Executes logical plans and returns a unified engine result.
+ *
+ * The engine talks to its collaborators only through the narrow interfaces
+ * CatalogReader, CatalogWriter, PlanConverter and StorageEngine. That keeps
+ * page-level types out of this class, and lets a test drive the whole
+ * dispatcher with stubs instead of a real database.
  */
 public class ExecutorImpl implements Executor {
-   private MetadataMgr metadataMgr;
-   private PlanConverter converter;
-   private StorageEngine storageEngine;
+   private final CatalogReader catalog;
+   private final CatalogWriter writer;
+   private final PlanConverter converter;
+   private final StorageEngine storageEngine;
 
+   /**
+    * Production wiring: a single MetadataMgr plays both catalog roles, and
+    * the default converter and storage engine are built on top of it.
+    */
    public ExecutorImpl(MetadataMgr metadataMgr) {
-      this.metadataMgr = metadataMgr;
-      this.converter = new PlanConverterImpl(metadataMgr);
-      this.storageEngine = new StorageEngineImpl(metadataMgr);
+      this(metadataMgr, metadataMgr, new PlanConverterImpl(metadataMgr),
+            new StorageEngineImpl(metadataMgr));
+   }
+
+   /**
+    * Test-friendly wiring: every collaborator can be replaced.
+    */
+   public ExecutorImpl(CatalogReader catalog, CatalogWriter writer,
+                       PlanConverter converter, StorageEngine storageEngine) {
+      this.catalog = catalog;
+      this.writer = writer;
+      this.converter = converter;
+      this.storageEngine = storageEngine;
    }
 
    public ExecuteResult execute(LogicalPlan plan, Transaction tx) {
@@ -34,18 +53,24 @@ public class ExecutorImpl implements Executor {
    }
 
    private ExecuteResult executeCreateTable(CreateTablePlan plan, Transaction tx) {
-      Schema schema = new Schema();
-      for (ColumnDef column : plan.columns()) {
-         if (column.type() == ColumnType.INTEGER)
-            schema.addIntField(column.name());
-         else
-            schema.addStringField(column.name(), column.length());
-      }
-      metadataMgr.createTable(plan.tableName(), schema, tx);
+      if (catalog.tableExists(plan.tableName(), tx))
+         throw EngineException.tableExists(plan.tableName());
+      if (plan.columns().isEmpty())
+         throw EngineException.emptySchema(plan.tableName());
+
+      writer.createTable(plan.tableName(), plan.columns(), tx);
       return ExecuteResult.updateResult(0);
    }
 
    private ExecuteResult executeInsert(InsertPlan plan, Transaction tx) {
+      requireTable(plan.tableName(), tx);
+      if (plan.columns().size() != plan.values().size())
+         throw EngineException.arityMismatch(plan.tableName(),
+               plan.columns().size(), plan.values().size());
+      for (String column : plan.columns())
+         if (!catalog.columnExists(plan.tableName(), column, tx))
+            throw EngineException.columnNotFound(plan.tableName(), column);
+
       String[] columns = plan.columns().toArray(new String[0]);
       Constant[] values = plan.values().toArray(new Constant[0]);
       storageEngine.insertRow(plan.tableName(), columns, values, tx);
@@ -53,6 +78,7 @@ public class ExecutorImpl implements Executor {
    }
 
    private ExecuteResult executeDelete(DeletePlan plan, Transaction tx) {
+      requireTable(plan.tableName(), tx);
       int affected = storageEngine.deleteRows(plan.tableName(), plan.predicate(), tx);
       return ExecuteResult.updateResult(affected);
    }
@@ -74,5 +100,15 @@ public class ExecutorImpl implements Executor {
       finally {
          scan.close();
       }
+   }
+
+   /**
+    * Guards every statement that touches an existing table. Without this the
+    * failure surfaces much later as a null layout inside TableScan, which is
+    * impossible to attribute to a stage during integration.
+    */
+   private void requireTable(String tableName, Transaction tx) {
+      if (!catalog.tableExists(tableName, tx))
+         throw EngineException.tableNotFound(tableName);
    }
 }

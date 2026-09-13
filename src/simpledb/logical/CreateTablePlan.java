@@ -23,6 +23,10 @@ public class CreateTablePlan extends LogicalPlan {
       return Collections.unmodifiableList(columns);
    }
 
+   public List<ColumnDef> outputSchema() {
+      return Collections.unmodifiableList(columns);
+   }
+
    public String explain(int indent) {
       return pad(indent) + "CreateTable[" + tableName + " " + columns + "]";
    }
