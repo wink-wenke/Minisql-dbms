@@ -32,8 +32,8 @@ public class StorageWalkthrough {
       new ColumnDef("age", ColumnType.INTEGER, 0));
 
    public static void main(String[] args) {
-      TestBase.resetDatabase(DB);
-      SimpleDB db = new SimpleDB(DB);
+      String dir = TestBase.freshDatabase(DB);
+      SimpleDB db = new SimpleDB(dir);
       Transaction tx = db.newTx();
       MetadataMgr mdm = db.mdMgr();
       Executor executor = new ExecutorImpl(mdm);
@@ -73,7 +73,14 @@ public class StorageWalkthrough {
       System.out.print(executor.execute(new SeqScanPlan(TABLE, COLUMNS), tx).formatted());
 
       tx.commit();
-      TestBase.resetDatabase(DB);
+
+      // 故意不在这里清理：SimpleDB 没有关闭文件句柄的入口，程序自己还
+      // 占着这些 .tbl，Windows 上删必然失败。留着反而方便你用十六进制
+      // 工具翻真实字节，下次运行时开头会自动清掉。
+      System.out.println();
+      System.out.println("数据保留在 " + dir + "/ 目录，可以打开 " + dir
+         + "/student.tbl 查看真实字节。");
+      System.out.println("下次运行前会自动清理。");
    }
 
    private static void dumpTable(Transaction tx, MetadataMgr mdm, String table) {

@@ -19,6 +19,7 @@ import simpledb.tx.Transaction;
 public class PersistenceTest extends TestBase {
    private static final String DB = "persistdb";
    private static final String TABLE = "account";
+   private static String dir;
 
    private static final List<ColumnDef> COLUMNS = Arrays.asList(
       new ColumnDef("id", ColumnType.INTEGER, 0),
@@ -30,10 +31,10 @@ public class PersistenceTest extends TestBase {
    }
 
    protected void cases() throws Exception {
-      resetDatabase(DB);
+      dir = freshDatabase(DB);
 
       test("rows written before a restart are still there", () -> {
-         SimpleDB first = new SimpleDB(DB);
+         SimpleDB first = new SimpleDB(dir);
          Transaction tx = first.newTx();
          Executor executor = new ExecutorImpl(first.mdMgr());
          executor.execute(new CreateTablePlan(TABLE, COLUMNS), tx);
@@ -41,7 +42,7 @@ public class PersistenceTest extends TestBase {
          insert(executor, tx, 2, "Bob", 50);
          tx.commit();
 
-         SimpleDB reopened = new SimpleDB(DB);
+         SimpleDB reopened = new SimpleDB(dir);
          Transaction tx2 = reopened.newTx();
          Executor executor2 = new ExecutorImpl(reopened.mdMgr());
          ExecuteResult r = executor2.execute(new SeqScanPlan(TABLE, COLUMNS), tx2);
@@ -50,7 +51,7 @@ public class PersistenceTest extends TestBase {
       });
 
       test("a delete before a restart stays deleted", () -> {
-         SimpleDB first = new SimpleDB(DB);
+         SimpleDB first = new SimpleDB(dir);
          Transaction tx = first.newTx();
          Executor executor = new ExecutorImpl(first.mdMgr());
          ExecuteResult deleted = executor.execute(
@@ -58,7 +59,7 @@ public class PersistenceTest extends TestBase {
          assertEquals("affected rows", 1, deleted.getAffectedRows());
          tx.commit();
 
-         SimpleDB reopened = new SimpleDB(DB);
+         SimpleDB reopened = new SimpleDB(dir);
          Transaction tx2 = reopened.newTx();
          Executor executor2 = new ExecutorImpl(reopened.mdMgr());
          ExecuteResult r = executor2.execute(new SeqScanPlan(TABLE, COLUMNS), tx2);
@@ -68,13 +69,13 @@ public class PersistenceTest extends TestBase {
       });
 
       test("a row inserted after a restart survives the next one", () -> {
-         SimpleDB db = new SimpleDB(DB);
+         SimpleDB db = new SimpleDB(dir);
          Transaction tx = db.newTx();
          Executor executor = new ExecutorImpl(db.mdMgr());
          insert(executor, tx, 3, "Carol", 75);
          tx.commit();
 
-         SimpleDB reopened = new SimpleDB(DB);
+         SimpleDB reopened = new SimpleDB(dir);
          Transaction tx2 = reopened.newTx();
          Executor executor2 = new ExecutorImpl(reopened.mdMgr());
          ExecuteResult r = executor2.execute(new SeqScanPlan(TABLE, COLUMNS), tx2);
@@ -83,7 +84,7 @@ public class PersistenceTest extends TestBase {
       });
 
       test("the catalog is reloaded, not rebuilt empty", () -> {
-         SimpleDB db = new SimpleDB(DB);
+         SimpleDB db = new SimpleDB(dir);
          Transaction tx = db.newTx();
          assertEquals("table exists", true, db.mdMgr().tableExists(TABLE, tx));
          assertEquals("column count", 3, db.mdMgr().getColumns(TABLE, tx).size());
@@ -93,7 +94,7 @@ public class PersistenceTest extends TestBase {
       });
 
       test("reopening does not lose the column order", () -> {
-         SimpleDB db = new SimpleDB(DB);
+         SimpleDB db = new SimpleDB(dir);
          Transaction tx = db.newTx();
          ExecuteResult r = new ExecutorImpl(db.mdMgr())
             .execute(new SeqScanPlan(TABLE, COLUMNS), tx);

@@ -27,8 +27,8 @@ public class EngineTest extends TestBase {
    }
 
    protected void cases() throws Exception {
-      resetDatabase(DB);
-      SimpleDB db = new SimpleDB(DB);
+      String dir = freshDatabase(DB);
+      SimpleDB db = new SimpleDB(dir);
       MetadataMgr mdm = db.mdMgr();
       final Executor executor = new ExecutorImpl(mdm);
       final Transaction tx = db.newTx();

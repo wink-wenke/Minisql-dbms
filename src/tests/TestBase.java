@@ -91,15 +91,52 @@ public abstract class TestBase {
     * Deletes the database directory so the next SimpleDB starts from scratch.
     * FileMgr treats a missing directory as a new database, which is exactly
     * what makes these suites repeatable.
+    *
+    * Returns false when something still holds a file open, which happens a
+    * lot on Windows once a .tbl file has been opened in an editor or a hex
+    * viewer. Running on a half-deleted directory is dangerous: the next run
+    * replays the log against incomplete files and can wipe tblcat, which then
+    * makes TableMgr.getLayout() hand back a slot size of -1.
     */
-   protected static void resetDatabase(String dirname) {
+   protected static boolean resetDatabase(String dirname) {
       File dir = new File(dirname);
       if (!dir.exists())
-         return;
+         return true;
+
+      List<String> stuck = new ArrayList<>();
       File[] files = dir.listFiles();
       if (files != null)
          for (File file : files)
-            file.delete();
-      dir.delete();
+            if (!file.delete()) {
+               file.deleteOnExit();
+               stuck.add(file.getName());
+            }
+      if (!dir.delete() && dir.exists()) {
+         dir.deleteOnExit();
+         stuck.add(dirname + File.separator);
+      }
+
+      if (stuck.isEmpty())
+         return true;
+
+      System.out.println("  [warn] " + dirname + " 没删干净，这些文件仍被占用：");
+      for (String name : stuck)
+         System.out.println("           " + name);
+      System.out.println("         关闭占用它们的程序后，这些残留会在 JVM 退出时被清理。");
+      return false;
+   }
+
+   /**
+    * Returns the name of a database directory that is guaranteed to be empty.
+    *
+    * Uses dirname when it can be wiped, otherwise falls back to dirname1,
+    * dirname2 and so on. A leftover .tbl held open by some editor can then
+    * never turn into a half-deleted database and a confusing crash.
+    */
+   protected static String freshDatabase(String dirname) {
+      String candidate = dirname;
+      for (int i = 1; i <= 20 && !resetDatabase(candidate); i++)
+         candidate = dirname + i;
+      return candidate;
    }
 }

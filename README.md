@@ -66,6 +66,8 @@ java -cp build simpledb.metadata.MetadataMgrTest
 
 ### 运行测试
 
+Git Bash / Linux / macOS：
+
 ```bash
 # 编译（含测试；derbyclient 需要 Derby 依赖，未纳入）
 javac -encoding UTF-8 -d build -sourcepath src \
@@ -73,6 +75,26 @@ javac -encoding UTF-8 -d build -sourcepath src \
 
 # 运行引擎测试套件
 java -cp build tests.RunAllTests
+```
+
+Windows PowerShell：
+
+```powershell
+javac -encoding UTF-8 -d build -sourcepath src (Get-ChildItem -Recurse -Path src\simpledb,src\simpleclient,src\tests -Filter *.java).FullName
+
+java -cp build tests.RunAllTests
+```
+
+也可以只给入口文件，让 javac 顺着 `-sourcepath` 自己找依赖：
+
+```powershell
+javac -encoding UTF-8 -d build -sourcepath src src\tests\RunAllTests.java src\tests\StorageWalkthrough.java
+```
+
+存储层走查程序会打印目录自举、字段偏移、删除标记与槽位复用，可用于答辩演示：
+
+```powershell
+java -cp build tests.StorageWalkthrough
 ```
 
 测试覆盖 CREATE / INSERT / SELECT / DELETE 主流程、`>` 与 `!=` 谓词、
