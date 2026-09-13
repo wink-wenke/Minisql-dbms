@@ -9,6 +9,7 @@ import simpledb.metadata.MetadataMgr;
 import simpledb.plan.*;
 import simpledb.index.planner.IndexUpdatePlanner;
 import simpledb.opt.HeuristicQueryPlanner;
+import simpledb.storage.*;
 
 /**
  * The class that configures the system.
@@ -16,7 +17,7 @@ import simpledb.opt.HeuristicQueryPlanner;
  * @author Edward Sciore
  */
 public class SimpleDB {
-   public static int BLOCK_SIZE = 400;
+   public static int BLOCK_SIZE = 4096;
    public static int BUFFER_SIZE = 8;
    public static String LOG_FILE = "simpledb.log";
 
@@ -25,6 +26,10 @@ public class SimpleDB {
    private  LogMgr      lm;
    private  MetadataMgr mdm;
    private  Planner planner;
+   private  FileManager   fileManager;
+   private  LogManager    logManager;
+   private  BufferManager bufferManager;
+   private  PageManager   pageManager;
 
    /**
     * A constructor useful for debugging.
@@ -36,7 +41,11 @@ public class SimpleDB {
       File dbDirectory = new File(dirname);
       fm = new FileMgr(dbDirectory, blocksize);
       lm = new LogMgr(fm, LOG_FILE);
-      bm = new BufferMgr(fm, lm, buffsize); 
+      bm = new BufferMgr(fm, lm, buffsize);
+      fileManager   = new FileManagerImpl(fm);
+      logManager    = new LogManagerImpl(lm);
+      bufferManager = new BufferManagerImpl(bm);
+      pageManager   = new PageManagerImpl(fm);
    }
    
    /**
@@ -82,11 +91,25 @@ public class SimpleDB {
    // These methods aid in debugging
    public FileMgr fileMgr() {
       return fm;
-   }   
+   }
    public LogMgr logMgr() {
       return lm;
-   }   
+   }
    public BufferMgr bufferMgr() {
       return bm;
-   }   
+   }
+
+   // 存储系统接口（供引擎层调用）
+   public FileManager getFileManager() {
+      return fileManager;
+   }
+   public LogManager getLogManager() {
+      return logManager;
+   }
+   public BufferManager getBufferManager() {
+      return bufferManager;
+   }
+   public PageManager getPageManager() {
+      return pageManager;
+   }
  }

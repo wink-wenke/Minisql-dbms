@@ -3,12 +3,7 @@ package simpledb.log;
 import java.util.Iterator;
 import simpledb.file.*;
 
-/**
- * A class that provides the ability to move through the
- * records of the log file in reverse order.
- * 
- * @author Edward Sciore
- */
+
 class LogIterator implements Iterator<byte[]> {
    private FileMgr fm;
    private BlockId blk;
@@ -16,10 +11,7 @@ class LogIterator implements Iterator<byte[]> {
    private int currentpos;
    private int boundary;
 
-   /**
-    * Creates an iterator for the records in the log file,
-    * positioned after the last log record.
-    */
+
    public LogIterator(FileMgr fm, BlockId blk) {
       this.fm = fm;
       this.blk = blk;
@@ -28,22 +20,11 @@ class LogIterator implements Iterator<byte[]> {
       moveToBlock(blk);
    }
 
-   /**
-    * Determines if the current log record
-    * is the earliest record in the log file.
-    * @return true if there is an earlier record
-    */
    public boolean hasNext() {
       return currentpos<fm.blockSize() || blk.number()>0;
    }
 
-   /**
-    * Moves to the next log record in the block.
-    * If there are no more log records in the block,
-    * then move to the previous block
-    * and return the log record from there.
-    * @return the next earliest log record
-    */
+   //每一次调用next()方法，都会返回当前日志块中最靠近尾部的日志记录，并将指针移动到前一条日志记录的位置
    public byte[] next() {
       if (currentpos == fm.blockSize()) {
          blk = new BlockId(blk.fileName(), blk.number()-1);
@@ -54,11 +35,6 @@ class LogIterator implements Iterator<byte[]> {
       return rec;
    }
 
-   /**
-    * Moves to the specified log block
-    * and positions it at the first record in that block
-    * (i.e., the most recent one).
-    */
    private void moveToBlock(BlockId blk) {
       fm.read(blk, p);
       boundary = p.getInt(0);
