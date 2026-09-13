@@ -17,6 +17,8 @@ public class EngineException extends RuntimeException {
       COLUMN_NOT_FOUND("column does not exist"),
       TYPE_MISMATCH("value type does not match column type"),
       ARITY_MISMATCH("column count does not match value count"),
+      VALUE_TOO_LONG("value is longer than the declared column length"),
+      NAME_TOO_LONG("identifier is longer than the catalog allows"),
       EMPTY_SCHEMA("statement has no column definition"),
       PLAN_CONVERSION("logical plan cannot be converted to a query plan"),
       STORAGE("storage engine failure");
@@ -68,6 +70,24 @@ public class EngineException extends RuntimeException {
       return new EngineException(ErrorType.ARITY_MISMATCH, "table '" + tableName + "'",
             ErrorType.ARITY_MISMATCH.description() + " (columns=" + columns
                   + ", values=" + values + ")");
+   }
+
+   /**
+    * Without this check a long string quietly overwrites the bytes of the
+    * next field, because SimpleDB writes whatever length the value has.
+    */
+   public static EngineException valueTooLong(String tableName, String columnName,
+                                              int actual, int limit) {
+      return new EngineException(ErrorType.VALUE_TOO_LONG,
+            "column '" + columnName + "' of table '" + tableName + "'",
+            ErrorType.VALUE_TOO_LONG.description() + " (got " + actual
+                  + " characters, limit " + limit + ")");
+   }
+
+   public static EngineException nameTooLong(String kind, String name, int limit) {
+      return new EngineException(ErrorType.NAME_TOO_LONG, kind + " '" + name + "'",
+            ErrorType.NAME_TOO_LONG.description() + " (got " + name.length()
+                  + " characters, limit " + limit + ")");
    }
 
    public static EngineException emptySchema(String tableName) {

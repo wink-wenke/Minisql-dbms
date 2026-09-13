@@ -32,8 +32,32 @@ public class StorageEngineImpl implements StorageEngine {
       try {
          us.insert();
          for (int i = 0; i < columns.length; i++)
-            setValue(us, tableName, columns[i], values[i]);
+            setValue(us, tableName, columns[i], values[i], true);
          return us.getRid();
+      }
+      finally {
+         us.close();
+      }
+   }
+
+   public int updateRows(String tableName, Predicate predicate, String[] columns,
+                         Constant[] values, Transaction tx) {
+      if (columns.length != values.length)
+         throw EngineException.arityMismatch(tableName, columns.length, values.length);
+      requireTable(tableName, tx);
+
+      Plan p = new TablePlan(tx, tableName, metadataMgr);
+      if (predicate != null)
+         p = new SelectPlan(p, predicate);
+      UpdateScan us = (UpdateScan) p.open();
+      int count = 0;
+      try {
+         while (us.next()) {
+            for (int i = 0; i < columns.length; i++)
+               setValue(us, tableName, columns[i], values[i], false);
+            count++;
+         }
+         return count;
       }
       finally {
          us.close();
@@ -76,17 +100,20 @@ public class StorageEngineImpl implements StorageEngine {
     * typed engine error. The row inserted by the caller is removed again so a
     * rejected INSERT does not leave a half-written record behind.
     */
-   private void setValue(UpdateScan us, String tableName, String column, Constant value) {
+   private void setValue(UpdateScan us, String tableName, String column, Constant value,
+                         boolean discardRowOnFailure) {
       try {
          us.setVal(column, value);
       }
       catch (NullPointerException e) {
-         us.delete();
+         if (discardRowOnFailure)
+            us.delete();
          throw EngineException.typeMismatch(tableName, column,
                "value " + value + " is not an INT");
       }
       catch (ClassCastException e) {
-         us.delete();
+         if (discardRowOnFailure)
+            us.delete();
          throw EngineException.typeMismatch(tableName, column,
                "value " + value + " does not match the declared column type");
       }

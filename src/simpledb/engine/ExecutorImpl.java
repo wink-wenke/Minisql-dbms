@@ -47,6 +47,8 @@ public class ExecutorImpl implements Executor {
          return executeCreateTable((CreateTablePlan) plan, tx);
       if (plan instanceof InsertPlan)
          return executeInsert((InsertPlan) plan, tx);
+      if (plan instanceof UpdatePlan)
+         return executeUpdate((UpdatePlan) plan, tx);
       if (plan instanceof DeletePlan)
          return executeDelete((DeletePlan) plan, tx);
       return executeQuery(plan, tx);
@@ -70,11 +72,43 @@ public class ExecutorImpl implements Executor {
       for (String column : plan.columns())
          if (!catalog.columnExists(plan.tableName(), column, tx))
             throw EngineException.columnNotFound(plan.tableName(), column);
+      checkValueLengths(plan.tableName(), plan.columns(), plan.values(), tx);
 
       String[] columns = plan.columns().toArray(new String[0]);
       Constant[] values = plan.values().toArray(new Constant[0]);
       storageEngine.insertRow(plan.tableName(), columns, values, tx);
       return ExecuteResult.updateResult(1);
+   }
+
+   /**
+    * Rejects a string that is longer than its column allows. SimpleDB does
+    * not check this, so an over-long value would spill into the bytes of the
+    * next field and silently corrupt the record.
+    */
+   private void checkValueLengths(String tableName, List<String> columns,
+                                  List<Constant> values, Transaction tx) {
+      for (int i = 0; i < columns.size(); i++) {
+         ColumnDef def = catalog.getColumn(tableName, columns.get(i), tx);
+         if (def == null || def.type() != ColumnType.VARCHAR)
+            continue;
+         String value = values.get(i).asString();
+         if (value != null && value.length() > def.length())
+            throw EngineException.valueTooLong(tableName, def.name(),
+                  value.length(), def.length());
+      }
+   }
+
+   private ExecuteResult executeUpdate(UpdatePlan plan, Transaction tx) {
+      requireTable(plan.tableName(), tx);
+      for (String column : plan.columns())
+         if (!catalog.columnExists(plan.tableName(), column, tx))
+            throw EngineException.columnNotFound(plan.tableName(), column);
+      checkValueLengths(plan.tableName(), plan.columns(), plan.values(), tx);
+
+      int affected = storageEngine.updateRows(plan.tableName(), plan.predicate(),
+            plan.columns().toArray(new String[0]),
+            plan.values().toArray(new Constant[0]), tx);
+      return ExecuteResult.updateResult(affected);
    }
 
    private ExecuteResult executeDelete(DeletePlan plan, Transaction tx) {

@@ -12,6 +12,9 @@ public interface StorageEngine {
 
    RID insertRow(String tableName, String[] columns, Constant[] values, Transaction tx);
 
+   int updateRows(String tableName, Predicate predicate, String[] columns,
+                  Constant[] values, Transaction tx);
+
    int deleteRows(String tableName, Predicate predicate, Transaction tx);
 
    int getRecordCount(String tableName, Transaction tx);

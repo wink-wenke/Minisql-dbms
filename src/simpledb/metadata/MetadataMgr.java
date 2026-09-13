@@ -5,6 +5,7 @@ import simpledb.tx.Transaction;
 import simpledb.record.*;
 import simpledb.engine.CatalogReader;
 import simpledb.engine.CatalogWriter;
+import simpledb.engine.EngineException;
 import simpledb.shared.ColumnDef;
 import simpledb.shared.ColumnType;
 
@@ -31,6 +32,15 @@ public class MetadataMgr implements CatalogReader, CatalogWriter {
     * execution engine.
     */
    public void createTable(String tableName, List<ColumnDef> columns, Transaction tx) {
+      // The catalog stores names in fixed-width VARCHAR(MAX_NAME) fields.
+      // Oversized names would blow up inside Page with a BufferUnderflow, so
+      // they are rejected here where a useful message can still be produced.
+      if (tableName.length() > TableMgr.MAX_NAME)
+         throw EngineException.nameTooLong("table", tableName, TableMgr.MAX_NAME);
+      for (ColumnDef column : columns)
+         if (column.name().length() > TableMgr.MAX_NAME)
+            throw EngineException.nameTooLong("column", column.name(), TableMgr.MAX_NAME);
+
       Schema schema = new Schema();
       for (ColumnDef column : columns) {
          if (column.type() == ColumnType.INTEGER)

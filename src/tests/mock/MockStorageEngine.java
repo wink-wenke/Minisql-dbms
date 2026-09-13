@@ -16,10 +16,16 @@ import simpledb.tx.Transaction;
 public class MockStorageEngine implements StorageEngine {
    private final List<String> calls = new ArrayList<>();
    private int rowsToDelete;
+   private int rowsToUpdate;
 
    /** Decides how many rows the next delete reports as affected. */
    public void setRowsToDelete(int rows) {
       this.rowsToDelete = rows;
+   }
+
+   /** Decides how many rows the next update reports as affected. */
+   public void setRowsToUpdate(int rows) {
+      this.rowsToUpdate = rows;
    }
 
    public Scan scan(String tableName, Transaction tx) {
@@ -30,6 +36,12 @@ public class MockStorageEngine implements StorageEngine {
    public RID insertRow(String tableName, String[] columns, Constant[] values, Transaction tx) {
       calls.add("insert:" + tableName + ":" + Arrays.toString(columns));
       return null;
+   }
+
+   public int updateRows(String tableName, Predicate predicate, String[] columns,
+                         Constant[] values, Transaction tx) {
+      calls.add("update:" + tableName + ":" + Arrays.toString(columns));
+      return rowsToUpdate;
    }
 
    public int deleteRows(String tableName, Predicate predicate, Transaction tx) {

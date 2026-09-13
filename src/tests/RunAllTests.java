@@ -13,7 +13,9 @@ public class RunAllTests {
       List<TestBase> suites = new ArrayList<>();
       suites.add(new ExecutorUnitTest());
       suites.add(new EngineTest());
+      suites.add(new BoundaryTest());
       suites.add(new PersistenceTest());
+      suites.add(new AdvancedQueryTest());
 
       int failed = 0;
       for (TestBase suite : suites)
