@@ -1,0 +1,254 @@
+package simpledb.plan;
+
+import java.util.*;
+
+import simpledb.query.*;
+import simpledb.record.Schema;
+import simpledb.materialize.SortPlan;
+import simpledb.materialize.GroupByPlan;
+import simpledb.materialize.AggregationFn;
+
+/**
+ * 查询优化器。
+ * <p>
+ * 对已生成的 Logical Plan 应用优化规则：
+ * <ol>
+ *   <li><b>常量折叠</b>：简化谓词中的常量表达式（c=c → TRUE, TRUE AND x → x）</li>
+ *   <li><b>冗余节点消除</b>：删除 Filter[TRUE]、Project[*] 等无意义节点</li>
+ * </ol>
+ * <p>
+ * 同时提供 Plan 树形可视化功能。
+ */
+public class Optimizer {
+
+    /**
+     * 对 Plan 应用所有优化规则，返回优化后的 Plan。
+     */
+    public static Plan optimize(Plan plan) {
+        // 递归优化
+        Plan optimized = applyRules(plan);
+        return optimized;
+    }
+
+    /**
+     * 递归应用优化规则。
+     */
+    private static Plan applyRules(Plan plan) {
+        if (plan instanceof SelectPlan) {
+            return optimizeSelect((SelectPlan) plan);
+        }
+        if (plan instanceof ProjectPlan) {
+            return optimizeProject((ProjectPlan) plan);
+        }
+        if (plan instanceof SortPlan) {
+            SortPlan sp = (SortPlan) plan;
+            Plan optimizedChild = applyRules(sp.child());
+            return new SortPlan(((SortPlan) plan).tx(), optimizedChild, sp.sortFields());
+        }
+        // 其他 Plan 类型暂不做结构优化
+        return plan;
+    }
+
+    /**
+     * Projection Pruning：收集查询实际需要的字段集合。
+     * 从 ProjectPlan 向下传播，裁剪不需要的列。
+     */
+    public static Plan projectionPruning(Plan plan) {
+        if (plan instanceof ProjectPlan) {
+            ProjectPlan pp = (ProjectPlan) plan;
+            List<String> fields = pp.fields();
+            Plan optimizedChild = pruneFields(pp.child(), new java.util.HashSet<>(fields));
+            return new ProjectPlan(optimizedChild, fields);
+        }
+        // 没有 ProjectPlan 的情况（SELECT *），不做裁剪
+        return plan;
+    }
+
+    /**
+     * 递归裁剪子计划中不需要的字段。
+     * 只保留 parentFields 中引用的字段。
+     */
+    private static Plan pruneFields(Plan plan, java.util.Set<String> parentFields) {
+        if (plan instanceof SelectPlan) {
+            SelectPlan sp = (SelectPlan) plan;
+            // 收集谓词中引用的字段
+            java.util.Set<String> needed = new java.util.HashSet<>(parentFields);
+            for (Term t : sp.predicate().collectTerms()) {
+                collectExpressionFields(t.lhs(), needed);
+                collectExpressionFields(t.rhs(), needed);
+            }
+            Plan prunedChild = pruneFields(sp.child(), needed);
+            return new SelectPlan(prunedChild, sp.predicate());
+        }
+        if (plan instanceof SortPlan) {
+            SortPlan sp = (SortPlan) plan;
+            java.util.Set<String> needed = new java.util.HashSet<>(parentFields);
+            needed.addAll(sp.sortFields());
+            Plan prunedChild = pruneFields(sp.child(), needed);
+            return new SortPlan(sp.tx(), prunedChild, sp.sortFields());
+        }
+        if (plan instanceof GroupByPlan) {
+            GroupByPlan gp = (GroupByPlan) plan;
+            java.util.Set<String> needed = new java.util.HashSet<>(parentFields);
+            needed.addAll(gp.groupFields());
+            for (AggregationFn fn : gp.aggFunctions()) {
+                needed.add(fn.fieldName());
+            }
+            Plan prunedChild = pruneFields(gp.child(), needed);
+            // GroupByPlan 需要 Transaction 参数，但这里无法获取，返回原样
+            return plan;
+        }
+        if (plan instanceof TablePlan) {
+            // TablePlan 无法裁剪，返回原样
+            return plan;
+        }
+        if (plan instanceof ProductPlan) {
+            // ProductPlan 暂不裁剪（需要更复杂的分析）
+            return plan;
+        }
+        return plan;
+    }
+
+    /**
+     * 收集表达式中引用的字段名。
+     */
+    private static void collectExpressionFields(Expression expr, java.util.Set<String> fields) {
+        expr.collectFields(fields);
+    }
+
+    /**
+     * 优化 SelectPlan：
+     * 1. 简化谓词（常量折叠 + 布尔化简）
+     * 2. 如果谓词恒真，移除 SelectPlan 节点
+     */
+    private static Plan optimizeSelect(SelectPlan sp) {
+        Predicate pred = sp.predicate();
+        Plan child = sp.child();
+
+        // 规则 1：简化谓词
+        Predicate simplified = pred.simplify();
+
+        // 规则 2：如果谓词恒真，移除 SelectPlan
+        if (simplified.isAlwaysTrue()) {
+            return applyRules(child);
+        }
+
+        // 规则 3：如果谓词恒假，保留（执行时不会返回任何行）
+        if (simplified.isAlwaysFalse()) {
+            return sp;
+        }
+
+        // 如果谓词被简化了（结构变化），创建新的 SelectPlan
+        if (!simplified.toString().equals(pred.toString())) {
+            return new SelectPlan(applyRules(child), simplified);
+        }
+
+        return sp;
+    }
+
+    /**
+     * 优化 ProjectPlan：
+     * 如果是 SELECT *，移除 ProjectPlan 节点
+     */
+    private static Plan optimizeProject(ProjectPlan pp) {
+        List<String> fields = pp.fields();
+        Plan optimizedChild = applyRules(pp.child());
+
+        // 规则：SELECT * 不需要 ProjectPlan
+        if (fields.size() == 1 && fields.get(0).equals("*")) {
+            return optimizedChild;
+        }
+
+        return new ProjectPlan(optimizedChild, fields);
+    }
+
+    // =================================================================
+    //  Plan 可视化
+    // =================================================================
+
+    /**
+     * 将 Plan 树格式化为可读字符串。
+     * <pre>
+     *   Project[id, name]
+     *     └─ Filter[age > 18 AND id != 3]
+     *         └─ SeqScan[student]
+     * </pre>
+     */
+    public static String visualize(Plan plan) {
+        StringBuilder sb = new StringBuilder();
+        visualizeHelper(plan, sb, "", true);
+        return sb.toString();
+    }
+
+    private static void visualizeHelper(Plan plan, StringBuilder sb, String prefix, boolean isLast) {
+        String connector = isLast ? "└─ " : "├─ ";
+        String nodeStr = planToString(plan);
+        sb.append(prefix).append(connector).append(nodeStr).append("\n");
+
+        String childPrefix = prefix + (isLast ? "   " : "│  ");
+        List<Plan> children = getChildren(plan);
+        for (int i = 0; i < children.size(); i++) {
+            visualizeHelper(children.get(i), sb, childPrefix, i == children.size() - 1);
+        }
+    }
+
+    /**
+     * 将 Plan 节点转为简短描述。
+     */
+    private static String planToString(Plan plan) {
+        if (plan instanceof GroupByPlan) {
+            GroupByPlan gp = (GroupByPlan) plan;
+            StringBuilder sb = new StringBuilder("GroupBy" + gp.groupFields().toString());
+            if (!gp.aggFunctions().isEmpty()) {
+                sb.append(" [");
+                for (AggregationFn fn : gp.aggFunctions()) {
+                    sb.append(fn.fieldName()).append(", ");
+                }
+                sb.setLength(sb.length() - 2);
+                sb.append("]");
+            }
+            return sb.toString();
+        }
+        if (plan instanceof SortPlan) {
+            SortPlan sp = (SortPlan) plan;
+            return "Sort" + sp.sortFields().toString();
+        }
+        if (plan instanceof SelectPlan) {
+            SelectPlan sp = (SelectPlan) plan;
+            return "Filter[" + sp.predicate().toString() + "]";
+        }
+        if (plan instanceof ProjectPlan) {
+            ProjectPlan pp = (ProjectPlan) plan;
+            return "Project" + pp.fields().toString();
+        }
+        if (plan instanceof TablePlan) {
+            TablePlan tp = (TablePlan) plan;
+            return "SeqScan[" + tp.tableName() + "]";
+        }
+        if (plan instanceof ProductPlan) {
+            return "Product";
+        }
+        return plan.getClass().getSimpleName();
+    }
+
+    /**
+     * 获取 Plan 的子节点。
+     */
+    private static List<Plan> getChildren(Plan plan) {
+        List<Plan> children = new ArrayList<>();
+        if (plan instanceof GroupByPlan) {
+            children.add(((GroupByPlan) plan).child());
+        } else if (plan instanceof SortPlan) {
+            children.add(((SortPlan) plan).child());
+        } else if (plan instanceof SelectPlan) {
+            children.add(((SelectPlan) plan).child());
+        } else if (plan instanceof ProjectPlan) {
+            children.add(((ProjectPlan) plan).child());
+        } else if (plan instanceof ProductPlan) {
+            ProductPlan pp = (ProductPlan) plan;
+            children.add(pp.left());
+            children.add(pp.right());
+        }
+        return children;
+    }
+}

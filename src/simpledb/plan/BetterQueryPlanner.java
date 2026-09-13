@@ -4,6 +4,7 @@ import java.util.*;
 import simpledb.tx.Transaction;
 import simpledb.metadata.*;
 import simpledb.parse.*;
+import simpledb.materialize.SortPlan;
 
 /**
  * A small improvement on the basic query planner.
@@ -50,8 +51,17 @@ public class BetterQueryPlanner implements QueryPlanner {
       //Step 3: Add a selection plan for the predicate
       p = new SelectPlan(p, data.pred());
       
-      //Step 4: Project on the field names
-      p = new ProjectPlan(p, data.fields());
+      //Step 4: Add ORDER BY sort plan (before projection, so sort field may not be selected)
+      List<String> orderby = data.orderby();
+      if (orderby != null && !orderby.isEmpty()) {
+         p = new SortPlan(tx, p, orderby);
+      }
+
+      //Step 5: Project on the field names (skip for SELECT *)
+      List<String> fields = data.fields();
+      if (!(fields.size() == 1 && fields.get(0).equals("*"))) {
+         p = new ProjectPlan(p, fields);
+      }
       return p;
    }
 }

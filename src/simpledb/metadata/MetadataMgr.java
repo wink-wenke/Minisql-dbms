@@ -1,19 +1,15 @@
 package simpledb.metadata;
 
-import java.util.*;
+import java.util.Map;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
-import simpledb.engine.CatalogReader;
-import simpledb.engine.CatalogWriter;
-import simpledb.shared.ColumnDef;
-import simpledb.shared.ColumnType;
 
-public class MetadataMgr implements CatalogReader, CatalogWriter {
-   private TableMgr  tblmgr;
-   private ViewMgr   viewmgr;
-   private StatMgr   statmgr;
-   private IndexMgr  idxmgr;
-
+public class MetadataMgr {
+   private static TableMgr  tblmgr;
+   private static ViewMgr   viewmgr;
+   private static StatMgr   statmgr;
+   private static IndexMgr  idxmgr;
+   
    public MetadataMgr(boolean isnew, Transaction tx) {
       tblmgr  = new TableMgr(isnew, tx);
       viewmgr = new ViewMgr(isnew, tblmgr, tx);
@@ -23,22 +19,6 @@ public class MetadataMgr implements CatalogReader, CatalogWriter {
    
    public void createTable(String tblname, Schema sch, Transaction tx) {
       tblmgr.createTable(tblname, sch, tx);
-   }
-
-   /**
-    * CatalogWriter entry point. Translating ColumnDef into a Schema belongs
-    * here, next to the catalog, instead of leaking page-level types into the
-    * execution engine.
-    */
-   public void createTable(String tableName, List<ColumnDef> columns, Transaction tx) {
-      Schema schema = new Schema();
-      for (ColumnDef column : columns) {
-         if (column.type() == ColumnType.INTEGER)
-            schema.addIntField(column.name());
-         else
-            schema.addStringField(column.name(), column.length());
-      }
-      createTable(tableName, schema, tx);
    }
    
    public Layout getLayout(String tblname, Transaction tx) {
@@ -63,21 +43,5 @@ public class MetadataMgr implements CatalogReader, CatalogWriter {
    
    public StatInfo getStatInfo(String tblname, Layout layout, Transaction tx) {
       return statmgr.getStatInfo(tblname, layout, tx);
-   }
-
-   public boolean tableExists(String tableName, Transaction tx) {
-      return tblmgr.tableExists(tableName, tx);
-   }
-
-   public boolean columnExists(String tableName, String columnName, Transaction tx) {
-      return tblmgr.columnExists(tableName, columnName, tx);
-   }
-
-   public ColumnDef getColumn(String tableName, String columnName, Transaction tx) {
-      return tblmgr.getColumn(tableName, columnName, tx);
-   }
-
-   public List<ColumnDef> getColumns(String tableName, Transaction tx) {
-      return tblmgr.getColumns(tableName, tx);
    }
 }

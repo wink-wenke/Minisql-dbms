@@ -5,6 +5,7 @@ import simpledb.tx.Transaction;
 import simpledb.metadata.MetadataMgr;
 import simpledb.parse.QueryData;
 import simpledb.plan.*;
+import simpledb.materialize.SortPlan;
 
 /**
  * A query planner that optimizes using a heuristic-based algorithm.
@@ -47,7 +48,18 @@ public class HeuristicQueryPlanner implements QueryPlanner {
       }
       
       // Step 4.  Project on the field names and return
-      return new ProjectPlan(currentplan, data.fields());
+      // Add ORDER BY sort plan (before projection)
+      List<String> orderby = data.orderby();
+      if (orderby != null && !orderby.isEmpty()) {
+         currentplan = new SortPlan(tx, currentplan, orderby);
+      }
+
+      // Skip ProjectPlan for SELECT *
+      List<String> fields = data.fields();
+      if (fields.size() == 1 && fields.get(0).equals("*")) {
+         return currentplan;
+      }
+      return new ProjectPlan(currentplan, fields);
    }
    
    private Plan getLowestSelectPlan() {

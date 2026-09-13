@@ -3,59 +3,90 @@ package simpledb.log;
 import java.util.Iterator;
 import simpledb.file.*;
 
-//将日志记录追加到日志文件中，保证崩溃有有据可查
+/**
+ * The log manager, which is responsible for 
+ * writing log records into a log file. The tail of 
+ * the log is kept in a bytebuffer, which is flushed
+ * to disk when needed. 
+ * @author Edward Sciore
+ */
 public class LogMgr {
-   private FileMgr fm;//底层文件管理器
-   private String logfile;//日志文件名
-   private Page logpage;//日志页面
-   private BlockId currentblk; //当前正在写入的日志块
-   private int latestLSN = 0; //最后的日志序列号，是内存中的日志序列号
-   private int lastSavedLSN = 0; //最后一次刷盘的LSN
+   private FileMgr fm;
+   private String logfile;
+   private Page logpage;
+   private BlockId currentblk;
+   private int latestLSN = 0;
+   private int lastSavedLSN = 0;
 
+   /**
+    * Creates the manager for the specified log file.
+    * If the log file does not yet exist, it is created
+    * with an empty first block.
+    * @param FileMgr the file manager
+    * @param logfile the name of the log file
+    */
    public LogMgr(FileMgr fm, String logfile) {
       this.fm = fm;
       this.logfile = logfile;
       byte[] b = new byte[fm.blockSize()];
-      logpage = new Page(b); //分配日志页缓冲区
+      logpage = new Page(b);
       int logsize = fm.length(logfile);
       if (logsize == 0)
-         currentblk = appendNewBlock(); //日志文件为空
+         currentblk = appendNewBlock();
       else {
          currentblk = new BlockId(logfile, logsize-1);
          fm.read(currentblk, logpage);
       }
    }
 
+   /**
+    * Ensures that the log record corresponding to the
+    * specified LSN has been written to disk.
+    * All earlier log records will also be written to disk.
+    * @param lsn the LSN of a log record
+    */
    public void flush(int lsn) {
       if (lsn >= lastSavedLSN)
          flush();
    }
-   
-   //返回日志迭代器，用于从当前日志块开始，向前遍历日志记录
+
    public Iterator<byte[]> iterator() {
       flush();
       return new LogIterator(fm, currentblk);
    }
 
-   //追加日志记录
+   /**
+    * Appends a log record to the log buffer. 
+    * The record consists of an arbitrary array of bytes. 
+    * Log records are written right to left in the buffer.
+    * The size of the record is written before the bytes.
+    * The beginning of the buffer contains the location
+    * of the last-written record (the "boundary").
+    * Storing the records backwards makes it easy to read
+    * them in reverse order.
+    * @param logrec a byte buffer containing the bytes.
+    * @return the LSN of the final value
+    */
    public synchronized int append(byte[] logrec) {
-      int boundary = logpage.getInt(0);   //读取当前日志页的边界位置
+      int boundary = logpage.getInt(0);
       int recsize = logrec.length;
-      int bytesneeded = recsize + Integer.BYTES; //记录大小+长度前缀
-      if (boundary - bytesneeded < Integer.BYTES) { //如果空间不够
-         flush();        // 先把当前块刷盘
-         currentblk = appendNewBlock(); //追加新块
-         boundary = logpage.getInt(0); //新块的boundary
+      int bytesneeded = recsize + Integer.BYTES;
+      if (boundary - bytesneeded < Integer.BYTES) { // the log record doesn't fit,
+         flush();        // so move to the next block.
+         currentblk = appendNewBlock();
+         boundary = logpage.getInt(0);
       }
-      int recpos = boundary - bytesneeded;  //新记录的写入位置
+      int recpos = boundary - bytesneeded;
 
-      logpage.setBytes(recpos, logrec);  //写入记录
-      logpage.setInt(0, recpos); // 更新boundary
-      latestLSN += 1; //LSN自增
+      logpage.setBytes(recpos, logrec);
+      logpage.setInt(0, recpos); // the new boundary
+      latestLSN += 1;
       return latestLSN;
    }
 
-
+   /**
+    * Initialize the bytebuffer and append it to the log file.
+    */
    private BlockId appendNewBlock() {
       BlockId blk = fm.append(logfile);     
       logpage.setInt(0, fm.blockSize());
@@ -63,9 +94,11 @@ public class LogMgr {
       return blk;
    }
 
-
-   private void flush() { //这里的刷盘操作遵循WAL协议，先刷日志再刷数据
-      fm.write(currentblk, logpage); //把内存中的日志写入磁盘
-      lastSavedLSN = latestLSN; //更新已保存的LSN
+   /**
+    * Write the buffer to the log file.
+    */
+   private void flush() {
+      fm.write(currentblk, logpage);
+      lastSavedLSN = latestLSN;
    }
 }

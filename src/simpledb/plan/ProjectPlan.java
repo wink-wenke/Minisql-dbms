@@ -69,4 +69,10 @@ public class ProjectPlan implements Plan {
    public Schema schema() {
       return schema;
    }
+
+    /** 返回投影字段列表（供优化器使用）。 */
+    public List<String> fields() { return schema.fields(); }
+
+    /** 返回子计划（供优化器使用）。 */
+    public Plan child() { return p; }
 }

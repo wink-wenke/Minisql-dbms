@@ -1,7 +1,9 @@
 package simpledb.buffer;
 
-
+/**
+ * A runtime exception indicating that the transaction
+ * needs to abort because a buffer request could not be satisfied.
+ * @author Edward Sciore
+ */
 @SuppressWarnings("serial")
-
-//pin等待超过十秒仍无可用缓冲区抛出异常
 public class BufferAbortException extends RuntimeException {}
