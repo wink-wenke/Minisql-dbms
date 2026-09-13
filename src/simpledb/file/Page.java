@@ -3,16 +3,17 @@ package simpledb.file;
 import java.nio.ByteBuffer;
 import java.nio.charset.*;
 
+//Page是内存页的抽象，封装了一个ByteBuffer对象，提供了对页内容的读写操作
 public class Page {
    private ByteBuffer bb;
    public static Charset CHARSET = StandardCharsets.US_ASCII;
 
-   // For creating data buffers
+   //数据缓冲区
    public Page(int blocksize) {
       bb = ByteBuffer.allocateDirect(blocksize);
    }
    
-   // For creating log pages
+   //日志页
    public Page(byte[] b) {
       bb = ByteBuffer.wrap(b);
    }
@@ -54,8 +55,7 @@ public class Page {
       return Integer.BYTES + (strlen * (int)bytesPerChar);
    }
 
-   // a package private method, needed by FileMgr
-   ByteBuffer contents() {
+   public ByteBuffer contents() {
       bb.position(0);
       return bb;
    }

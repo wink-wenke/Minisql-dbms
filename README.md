@@ -62,6 +62,23 @@ java -cp build simpledb.server.StartServer studentdb
 # 运行客户端
 java -cp build simpleclient.embedded.CreateStudentDB
 ```
+java -cp build simpledb.metadata.MetadataMgrTest
+
+### 运行测试
+
+```bash
+# 编译（含测试；derbyclient 需要 Derby 依赖，未纳入）
+javac -encoding UTF-8 -d build -sourcepath src \
+  $(find src/simpledb src/simpleclient src/tests -name "*.java")
+
+# 运行引擎测试套件
+java -cp build tests.RunAllTests
+```
+
+测试覆盖 CREATE / INSERT / SELECT / DELETE 主流程、`>` 与 `!=` 谓词、
+错误分类，以及重启后数据与系统目录不丢失。
+套件会自建 `testdb/` 与 `persistdb/`（已在 .gitignore 中），
+每次运行前自动清空，可重复执行。
 
 ## 开发指南
 
