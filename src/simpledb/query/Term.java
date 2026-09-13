@@ -10,6 +10,7 @@ import simpledb.record.*;
  */
 public class Term {
    private Expression lhs, rhs;
+   private String op;
    
    /**
     * Create a new term that compares two expressions
@@ -20,6 +21,22 @@ public class Term {
    public Term(Expression lhs, Expression rhs) {
       this.lhs = lhs;
       this.rhs = rhs;
+      this.op = "=";
+   }
+
+   /**
+    * Create a new comparison term.
+    * @param lhs the LHS expression
+    * @param op one of =, !=, <, <=, >, >=
+    * @param rhs the RHS expression
+    */
+   public Term(Expression lhs, String op, Expression rhs) {
+      this.lhs = lhs;
+      this.rhs = rhs;
+      if (!op.equals("=") && !op.equals("!=") && !op.equals("<")
+            && !op.equals("<=") && !op.equals(">") && !op.equals(">="))
+         throw new IllegalArgumentException("unsupported comparison operator: " + op);
+      this.op = op;
    }
    
    /**
@@ -32,7 +49,20 @@ public class Term {
    public boolean isSatisfied(Scan s) {
       Constant lhsval = lhs.evaluate(s);
       Constant rhsval = rhs.evaluate(s);
-      return rhsval.equals(lhsval);
+      int cmp = lhsval.compareTo(rhsval);
+      if (op.equals("="))
+         return cmp == 0;
+      if (op.equals("!="))
+         return cmp != 0;
+      if (op.equals("<"))
+         return cmp < 0;
+      if (op.equals("<="))
+         return cmp <= 0;
+      if (op.equals(">"))
+         return cmp > 0;
+      if (op.equals(">="))
+         return cmp >= 0;
+      return false;
    }
    
    /**
@@ -45,6 +75,9 @@ public class Term {
     */
    public int reductionFactor(Plan p) {
       String lhsName, rhsName;
+      if (!op.equals("="))
+         return 2;
+
       if (lhs.isFieldName() && rhs.isFieldName()) {
          lhsName = lhs.asFieldName();
          rhsName = rhs.asFieldName();
@@ -75,6 +108,8 @@ public class Term {
     * @return either the constant or null
     */
    public Constant equatesWithConstant(String fldname) {
+      if (!op.equals("="))
+         return null;
       if (lhs.isFieldName() &&
           lhs.asFieldName().equals(fldname) &&
           !rhs.isFieldName())
@@ -96,6 +131,8 @@ public class Term {
     * @return either the name of the other field, or null
     */
    public String equatesWithField(String fldname) {
+      if (!op.equals("="))
+         return null;
       if (lhs.isFieldName() &&
           lhs.asFieldName().equals(fldname) &&
           rhs.isFieldName())
@@ -119,6 +156,6 @@ public class Term {
    }
    
    public String toString() {
-      return lhs.toString() + "=" + rhs.toString();
+      return lhs.toString() + op + rhs.toString();
    }
 }

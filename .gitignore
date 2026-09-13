@@ -58,4 +58,13 @@ Thumbs.db
 *.db
 *.ldb
 *.mdb
+*.tbl
 studentdb/
+enginetestdb/
+metadatamgrtest/
+
+# Test database directories created by src/tests
+testdb/
+persistdb/
+walkthroughdb/
+probedb/
