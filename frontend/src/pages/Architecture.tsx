@@ -39,7 +39,7 @@ export default function Architecture() {
     <div className="flex-1 overflow-auto p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-text-primary mb-1">System Architecture</h1>
+        <h1 className="text-2xl font-bold text-text-primary mb-1">系统架构</h1>
         <p className="text-text-secondary text-sm">
           MiniSQL DBMS — A complete SQL pipeline from text to disk
         </p>
@@ -50,11 +50,11 @@ export default function Architecture() {
         <div className="flex-1 space-y-3">
           {/* Top Layer */}
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-1">LAYER 0 — INTERFACE</div>
+            <div className="text-xs text-text-muted font-mono mb-1">第 0 层 — 接口层</div>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-text-primary">HTTP API / Frontend</div>
-                <div className="text-xs text-text-secondary mt-1">REST API endpoints serving SQL execution requests</div>
+                <div className="text-sm font-semibold text-text-primary">HTTP 接口 / 前端</div>
+                <div className="text-xs text-text-secondary mt-1">提供 SQL 执行能力的 REST 接口</div>
               </div>
               <button
                 onClick={() => navigate('/playground')}
@@ -74,7 +74,7 @@ export default function Architecture() {
               key={layer.name}
               className={`border ${layer.color} rounded-lg p-4 ${layer.bg}`}
             >
-              <div className="text-xs text-text-muted font-mono mb-1">LAYER</div>
+              <div className="text-xs text-text-muted font-mono mb-1">层</div>
               <div className="text-sm font-semibold text-text-primary mb-1">{layer.name}</div>
               <div className="text-xs text-text-secondary mb-3">{layer.desc}</div>
               <div className="flex flex-wrap gap-2">
@@ -90,8 +90,8 @@ export default function Architecture() {
           {/* Bottom Layer */}
           <div className="flex justify-center text-text-muted text-xs font-mono">↓ Page I/O ↓</div>
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-1">LAYER 3 — PERSISTENCE</div>
-            <div className="text-sm font-semibold text-text-primary">Persistent Disk</div>
+            <div className="text-xs text-text-muted font-mono mb-1">第 3 层 — 持久化层</div>
+            <div className="text-sm font-semibold text-text-primary">持久化磁盘</div>
             <div className="text-xs text-text-secondary mt-1">4KB pages · WAL log · ARIES recovery</div>
           </div>
         </div>
@@ -99,28 +99,28 @@ export default function Architecture() {
         {/* Stats Panel */}
         <div className="w-64 space-y-3">
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-3">SYSTEM STATUS</div>
+            <div className="text-xs text-text-muted font-mono mb-3">系统状态</div>
             <div className="space-y-3">
               <div>
-                <div className="text-xs text-text-secondary">Tables</div>
+                <div className="text-xs text-text-secondary">数据表</div>
                 <div className="text-lg font-bold text-accent font-mono">
                   {stats?.tables.length ?? '—'}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-text-secondary">Cache Hit Rate</div>
+                <div className="text-xs text-text-secondary">缓存命中率</div>
                 <div className="text-lg font-bold text-green font-mono">
                   {stats ? `${(stats.cache.hitRate * 100).toFixed(1)}%` : '—'}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-text-secondary">Buffer Size</div>
+                <div className="text-xs text-text-secondary">缓冲池大小</div>
                 <div className="text-lg font-bold text-blue font-mono">
                   {stats?.bufferSize ?? '—'}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-text-secondary">Page Size</div>
+                <div className="text-xs text-text-secondary">页面大小</div>
                 <div className="text-lg font-bold text-text-primary font-mono">
                   {stats ? `${stats.pageSize} B` : '—'}
                 </div>
@@ -130,7 +130,7 @@ export default function Architecture() {
 
           {stats && stats.tables.length > 0 && (
             <div className="border border-border rounded-lg p-4 bg-bg-surface">
-              <div className="text-xs text-text-muted font-mono mb-2">TABLES</div>
+              <div className="text-xs text-text-muted font-mono mb-2">数据表</div>
               <div className="space-y-1">
                 {stats.tables.map((t) => (
                   <div key={t} className="text-sm text-text-secondary font-mono px-2 py-1 rounded bg-bg-primary">
@@ -142,15 +142,15 @@ export default function Architecture() {
           )}
 
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-2">DATA FLOW</div>
+            <div className="text-xs text-text-muted font-mono mb-2">数据流</div>
             <div className="text-xs text-text-secondary font-mono space-y-1">
-              <div>SQL → Token</div>
-              <div>Token → AST</div>
-              <div>AST → Logical Plan</div>
-              <div>Plan → Physical Plan</div>
-              <div>Plan → Execute</div>
-              <div>Execute → Pages</div>
-              <div>Pages → Disk</div>
+              <div>SQL → 词法单元</div>
+              <div>词法单元 → 抽象语法树</div>
+              <div>抽象语法树 → 逻辑计划</div>
+              <div>计划 → 物理计划</div>
+              <div>计划 → 执行</div>
+              <div>执行 → 页面</div>
+              <div>页面 → 磁盘</div>
             </div>
           </div>
         </div>

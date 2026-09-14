@@ -15,9 +15,9 @@ const PRESET_TESTS: { name: string; sql: string; expectError?: boolean }[] = [
   { name: 'SELECT *', sql: "SELECT * FROM test_t;" },
   { name: 'SELECT with WHERE', sql: "SELECT id FROM test_t WHERE id > 0;" },
   { name: 'DELETE', sql: "DELETE FROM test_t WHERE id = 1;" },
-  { name: 'Error: missing table', sql: "SELECT * FROM nonexistent;", expectError: true },
-  { name: 'Error: missing column', sql: "SELECT bad_col FROM test_t;", expectError: true },
-  { name: 'Error: syntax', sql: "SELCT * FROM test_t;", expectError: true },
+  { name: '报错： missing table', sql: "SELECT * FROM nonexistent;", expectError: true },
+  { name: '报错： missing column', sql: "SELECT bad_col FROM test_t;", expectError: true },
+  { name: '报错： syntax', sql: "SELCT * FROM test_t;", expectError: true },
 ];
 
 export default function Tests() {
@@ -40,15 +40,15 @@ export default function Tests() {
         res.push({
           name: test.name,
           sql: test.sql,
-          expected: test.expectError ? 'ERROR' : 'OK',
-          actual: hasError ? `ERROR: ${r.error!.message}` : (r.type === 'QUERY' ? `${r.rows?.length ?? 0} rows` : 'OK'),
+          expected: test.expectError ? '错误' : '正常',
+          actual: hasError ? `错误: ${r.error!.message}` : (r.type === 'QUERY' ? `${r.rows?.length ?? 0} rows` : '正常'),
           status: pass ? 'PASS' : 'FAIL',
         });
       } catch (e) {
         res.push({
           name: test.name,
           sql: test.sql,
-          expected: test.expectError ? 'ERROR' : 'OK',
+          expected: test.expectError ? '错误' : '正常',
           actual: `EXCEPTION: ${e}`,
           status: test.expectError ? 'PASS' : 'FAIL',
         });
@@ -66,7 +66,7 @@ export default function Tests() {
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-surface">
         <div className="flex items-center gap-3">
           <span className="text-green font-mono text-sm">✓</span>
-          <span className="text-sm font-semibold">Test Suite</span>
+          <span className="text-sm font-semibold">测试套件</span>
         </div>
         <button
           onClick={runTests}
@@ -94,11 +94,11 @@ export default function Tests() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-bg-surface">
-                <th className="px-3 py-2 text-left text-xs font-mono text-text-muted">Status</th>
-                <th className="px-3 py-2 text-left text-xs font-mono text-text-muted">Test</th>
+                <th className="px-3 py-2 text-left text-xs font-mono text-text-muted">状态</th>
+                <th className="px-3 py-2 text-left text-xs font-mono text-text-muted">测试</th>
                 <th className="px-3 py-2 text-left text-xs font-mono text-text-muted">SQL</th>
-                <th className="px-3 py-2 text-left text-xs font-mono text-text-muted">Expected</th>
-                <th className="px-3 py-2 text-left text-xs font-mono text-text-muted">Actual</th>
+                <th className="px-3 py-2 text-left text-xs font-mono text-text-muted">期望结果</th>
+                <th className="px-3 py-2 text-left text-xs font-mono text-text-muted">实际结果</th>
               </tr>
             </thead>
             <tbody>

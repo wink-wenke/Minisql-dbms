@@ -25,10 +25,10 @@ function TokenTable({ tokens }: { tokens: TokenInfo[] }) {
       <table className="w-full text-xs font-mono">
         <thead>
           <tr className="border-b border-border">
-            <th className="px-2 py-1 text-left text-text-muted">Type</th>
-            <th className="px-2 py-1 text-left text-text-muted">Lexeme</th>
-            <th className="px-2 py-1 text-right text-text-muted">Ln</th>
-            <th className="px-2 py-1 text-right text-text-muted">Col</th>
+            <th className="px-2 py-1 text-left text-text-muted">类型</th>
+            <th className="px-2 py-1 text-left text-text-muted">词素</th>
+            <th className="px-2 py-1 text-right text-text-muted">行</th>
+            <th className="px-2 py-1 text-right text-text-muted">列</th>
           </tr>
         </thead>
         <tbody>
@@ -94,12 +94,12 @@ export default function Pipeline() {
     {
       name: 'Plan (Before)',
       ready: !!result?.explain,
-      content: result?.explain && <PlanTree text={result.explain.planBefore} title="Unoptimized Plan" />,
+      content: result?.explain && <PlanTree text={result.explain.planBefore} title="未优化的计划" />,
     },
     {
       name: 'Plan (After)',
       ready: !!result?.explain,
-      content: result?.explain && <PlanTree text={result.explain.planAfter} title="Optimized Plan" />,
+      content: result?.explain && <PlanTree text={result.explain.planAfter} title="优化后的计划" />,
     },
     {
       name: 'Result',
@@ -143,7 +143,7 @@ export default function Pipeline() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-2 border-b border-border bg-bg-surface">
         <span className="text-blue font-mono text-sm">→</span>
-        <span className="text-sm font-semibold">Pipeline Explorer</span>
+        <span className="text-sm font-semibold">流水线浏览器</span>
         <span className="text-xs text-text-muted">— Visualize the complete SQL compilation pipeline</span>
       </div>
 
@@ -155,7 +155,7 @@ export default function Pipeline() {
             onChange={(e) => setSql(e.target.value)}
             className="flex-1 bg-bg-primary text-text-primary px-3 py-2 font-mono text-sm rounded border border-border focus:border-accent focus:outline-none resize-none"
             rows={2}
-            placeholder="Enter SQL to trace through the pipeline..."
+            placeholder="输入 SQL 以查看流水线处理过程..."
           />
           <button
             onClick={trace}

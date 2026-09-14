@@ -32,7 +32,7 @@ export default function Storage() {
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-surface">
         <div className="flex items-center gap-3">
           <span className="text-green font-mono text-sm">▦</span>
-          <span className="text-sm font-semibold">Storage Inspector</span>
+          <span className="text-sm font-semibold">存储检查器</span>
         </div>
         <button
           onClick={refresh}
@@ -56,7 +56,7 @@ export default function Storage() {
         {/* Hit Rate Bar */}
         {cache && (
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-2">CACHE HIT RATE</div>
+            <div className="text-xs text-text-muted font-mono mb-2">缓存命中率</div>
             <div className="w-full h-4 bg-bg-primary rounded-full overflow-hidden">
               <div
                 className="h-full bg-green rounded-full transition-all duration-500"
@@ -74,21 +74,21 @@ export default function Storage() {
         {/* Buffer Pool Info */}
         <div className="grid grid-cols-2 gap-4">
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-3">BUFFER POOL</div>
+            <div className="text-xs text-text-muted font-mono mb-3">缓冲池</div>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-text-secondary">Buffer Size</span>
+                <span className="text-sm text-text-secondary">缓冲池大小</span>
                 <span className="text-sm font-mono text-text-primary">{stats?.bufferSize ?? '—'} slots</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-text-secondary">Page Size</span>
+                <span className="text-sm text-text-secondary">页面大小</span>
                 <span className="text-sm font-mono text-text-primary">{stats?.pageSize ?? '—'} bytes</span>
               </div>
             </div>
           </div>
 
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-3">TABLES</div>
+            <div className="text-xs text-text-muted font-mono mb-3">数据表</div>
             {stats && stats.tables.length > 0 ? (
               <div className="space-y-1">
                 {stats.tables.map((t) => (
@@ -99,7 +99,7 @@ export default function Storage() {
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-text-muted">No tables yet</div>
+              <div className="text-sm text-text-muted">暂无数据表</div>
             )}
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function Storage() {
         {/* Buffer Visualization */}
         {stats && (
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-3">BUFFER POOL VISUALIZATION</div>
+            <div className="text-xs text-text-muted font-mono mb-3">缓冲池可视化</div>
             <div className="grid grid-cols-8 gap-2">
               {Array.from({ length: stats.bufferSize }, (_, i) => {
                 const used = i < (cache?.accessCount ?? 0) % stats.bufferSize;

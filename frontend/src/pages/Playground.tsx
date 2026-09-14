@@ -77,7 +77,7 @@ export default function Playground() {
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-surface">
         <div className="flex items-center gap-3">
           <span className="text-accent font-mono text-sm">▶</span>
-          <span className="text-sm font-semibold">SQL Playground</span>
+          <span className="text-sm font-semibold">SQL 演练场</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-text-muted font-mono">Ctrl+Enter</span>
@@ -114,7 +114,7 @@ export default function Playground() {
               value={sql}
               onChange={(e) => setSql(e.target.value)}
               className="w-full h-full resize-none bg-bg-primary text-text-primary p-3 font-mono text-sm leading-relaxed focus:outline-none placeholder:text-text-muted"
-              placeholder="Enter SQL statement..."
+              placeholder="输入 SQL 语句..."
               spellCheck={false}
             />
           </div>
@@ -143,7 +143,7 @@ export default function Playground() {
             {result?.error && (
               <div className="rounded border border-red/30 bg-red/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-red text-xs font-mono font-bold">ERROR</span>
+                  <span className="text-red text-xs font-mono font-bold">错误</span>
                   <span className="text-red/70 text-xs font-mono">[{result.error.type}]</span>
                 </div>
                 <div className="text-sm text-red">{result.error.message}</div>
@@ -177,7 +177,7 @@ export default function Playground() {
                         <tr key={i} className={`border-b border-border-subtle ${i % 2 === 0 ? 'bg-bg-primary' : 'bg-bg-surface/50'}`}>
                           {row.map((val, j) => (
                             <td key={j} className="px-3 py-1.5 text-xs font-mono text-text-primary">
-                              {val === null ? <span className="text-text-muted">NULL</span> : String(val)}
+                              {val === null ? <span className="text-text-muted">空值</span> : String(val)}
                             </td>
                           ))}
                         </tr>
@@ -191,7 +191,7 @@ export default function Playground() {
             {result && !result.error && result.type === 'UPDATE' && (
               <div className="rounded border border-green/30 bg-green/5 p-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-green text-xs font-mono font-bold">OK</span>
+                  <span className="text-green text-xs font-mono font-bold">正常</span>
                   <span className="text-sm text-text-secondary">
                     {result.affectedRows} record{result.affectedRows !== 1 ? 's' : ''} processed
                   </span>
@@ -204,7 +204,7 @@ export default function Playground() {
 
             {result && !result.error && result.type === 'EXPLAIN' && result.planText && (
               <div>
-                <div className="text-xs text-text-muted mb-2 font-mono">Execution Plan</div>
+                <div className="text-xs text-text-muted mb-2 font-mono">执行计划</div>
                 <pre className="text-sm font-mono text-text-primary bg-bg-surface border border-border rounded p-3 whitespace-pre-wrap">
                   {result.planText}
                 </pre>
