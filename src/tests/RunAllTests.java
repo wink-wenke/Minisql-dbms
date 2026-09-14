@@ -22,6 +22,7 @@ public class RunAllTests {
       suites.add(new FullPipelineTest());
       suites.add(new PersistenceTest());
       suites.add(new AdvancedQueryTest());
+      suites.add(new BoundaryTest());
 
       int failed = 0;
       for (TestBase suite : suites)

@@ -69,6 +69,7 @@ out/
 # 运行测试 / 启动服务时生成的数据库目录
 advancedb/
 boundarydb/
+bdebugdb/
 enginedemo/
 enginetestdb/
 metadatamgrtest/

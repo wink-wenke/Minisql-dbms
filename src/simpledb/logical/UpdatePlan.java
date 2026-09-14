@@ -17,8 +17,9 @@ public class UpdatePlan extends LogicalPlan {
 
    public UpdatePlan(String tableName, List<String> columns, List<Constant> values,
                      Predicate predicate) {
-      if (columns.size() != values.size())
-         throw new IllegalArgumentException("columns and values must have the same size");
+      // 列数/值数一致性不在构造期校验：逻辑计划是纯数据结构，
+      // 由 ExecutorImpl.executeUpdate 在执行期抛出 EngineException[ARITY_MISMATCH]，
+      // 这样错误类型与 INSERT 等语句保持一致（也避免 logical 层反向依赖 engine 层）。
       this.tableName = tableName;
       this.columns = new ArrayList<>(columns);
       this.values = new ArrayList<>(values);
