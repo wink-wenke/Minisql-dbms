@@ -4,6 +4,8 @@ import com.sun.net.httpserver.*;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import simpledb.server.SimpleDB;
@@ -20,6 +22,10 @@ import simpledb.parse.BadSyntaxException;
 import simpledb.parse.SemanticAnalyzer;
 import simpledb.parse.SemanticError;
 import simpledb.metadata.MetadataMgr;
+import simpledb.engine.Executor;
+import simpledb.engine.ExecutorImpl;
+import simpledb.logical.LogicalPlan;
+import simpledb.query.Constant;
 import simpledb.shared.ExecuteResult;
 import simpledb.shared.ColumnDef;
 import simpledb.storage.BufferManager;
@@ -50,6 +56,10 @@ public class HttpApiServer {
         server.createContext("/api/stats", this::handleStats);
         server.createContext("/api/tables", this::handleTables);
         server.createContext("/api/schema/", this::handleSchema);
+        // 成员B引擎通道：SQL -> LogicalPlan -> Executor
+        server.createContext("/api/engine/execute", this::handleEngineExecute);
+        server.createContext("/api/engine/tables", this::handleEngineTables);
+        server.createContext("/api/engine/schema/", this::handleEngineSchema);
         server.createContext("/", this::handleStatic);
     }
 
@@ -286,6 +296,117 @@ public class HttpApiServer {
         }
         scan.close();
         return ExecuteResult.queryResult(columns, rows);
+    }
+
+    // ============ 成员B引擎通道：SQL -> LogicalPlan -> Executor ============
+
+    /**
+     * 走成员B的引擎模块执行 SQL 子集。
+     * 与 /api/execute（SimpleDB 原生 Planner）互补，用于演示
+     * UPDATE / JOIN / ORDER BY / GROUP BY 等 Level-4 能力。
+     */
+    private void handleEngineExecute(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) {
+            sendError(exchange, 405, "Method not allowed");
+            return;
+        }
+        String sql = readBody(exchange);
+        Transaction tx = db.newTx();
+        try {
+            long start = System.currentTimeMillis();
+
+            EngineSqlTranslator translator = new EngineSqlTranslator(db.mdMgr());
+            EngineSqlTranslator.Translation translation = translator.translate(sql, tx);
+            LogicalPlan plan = translation.plan;
+
+            Executor executor = new ExecutorImpl(db.mdMgr());
+            ExecuteResult result = executor.execute(plan, tx);
+
+            // 引擎的 OrderByPlan 只支持升序，DESC 在结果层反转
+            List<List<Constant>> rows = Collections.emptyList();
+            if (result.getType() == ExecuteResult.ResultType.QUERY) {
+                List<List<Constant>> raw = result.getRows();
+                if (raw != null) {
+                    if (translation.reverse) {
+                        rows = new ArrayList<>(raw);
+                        Collections.reverse(rows);
+                    } else {
+                        rows = raw;
+                    }
+                }
+            }
+            tx.commit();
+            long elapsed = System.currentTimeMillis() - start;
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("{\"success\":true,\"engine\":\"memberB\",");
+            sb.append("\"type\":\"").append(result.getType()).append("\",");
+            sb.append("\"timing\":").append(elapsed).append(",");
+            sb.append("\"planText\":\"").append(JsonHelper.escape(plan.explain(0))).append("\",");
+            if (result.getType() == ExecuteResult.ResultType.QUERY) {
+                List<String> names = result.getColumnNames();
+                sb.append("\"columns\":[");
+                for (int i = 0; i < names.size(); i++) {
+                    if (i > 0) sb.append(",");
+                    sb.append("\"").append(JsonHelper.escape(names.get(i))).append("\"");
+                }
+                sb.append("],\"rows\":[");
+                for (int i = 0; i < rows.size(); i++) {
+                    if (i > 0) sb.append(",");
+                    sb.append("[");
+                    List<Constant> row = rows.get(i);
+                    for (int j = 0; j < row.size(); j++) {
+                        if (j > 0) sb.append(",");
+                        Constant v = row.get(j);
+                        sb.append("\"").append(JsonHelper.escape(v == null ? "" : v.toString())).append("\"");
+                    }
+                    sb.append("]");
+                }
+                sb.append("],\"rowCount\":").append(rows.size()).append(",\"affectedRows\":0");
+            } else {
+                sb.append("\"columns\":[],\"rows\":[],\"rowCount\":0,");
+                sb.append("\"affectedRows\":").append(result.getAffectedRows());
+            }
+            sb.append("}");
+            sendJson(exchange, 200, sb.toString());
+        } catch (Exception e) {
+            tx.rollback();
+            sendJson(exchange, 200, JsonHelper.error("ENGINE", e.getMessage(), 0, 0));
+        }
+    }
+
+    private void handleEngineTables(HttpExchange exchange) throws IOException {
+        if (!"GET".equals(exchange.getRequestMethod())) {
+            sendError(exchange, 405, "Method not allowed");
+            return;
+        }
+        Transaction tx = db.newTx();
+        try {
+            List<String> tables = db.mdMgr().listTables(tx);
+            tx.commit();
+            sendJson(exchange, 200, JsonHelper.toJsonTables(tables));
+        } catch (Exception e) {
+            tx.rollback();
+            sendJson(exchange, 500, JsonHelper.error("ENGINE", e.getMessage(), 0, 0));
+        }
+    }
+
+    private void handleEngineSchema(HttpExchange exchange) throws IOException {
+        if (!"GET".equals(exchange.getRequestMethod())) {
+            sendError(exchange, 405, "Method not allowed");
+            return;
+        }
+        String path = exchange.getRequestURI().getPath();
+        String tableName = path.substring("/api/engine/schema/".length());
+        Transaction tx = db.newTx();
+        try {
+            List<ColumnDef> columns = db.mdMgr().getColumns(tableName, tx);
+            tx.commit();
+            sendJson(exchange, 200, JsonHelper.toJsonColumns(tableName, columns));
+        } catch (Exception e) {
+            tx.rollback();
+            sendJson(exchange, 500, JsonHelper.error("ENGINE", e.getMessage(), 0, 0));
+        }
     }
 
     private String readBody(HttpExchange exchange) throws IOException {

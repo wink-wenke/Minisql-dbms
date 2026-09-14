@@ -1,4 +1,11 @@
-import type { ExecuteResponse, TokensResponse, ExplainResponse, StatsResponse, SchemaResponse } from './types';
+import type {
+  ExecuteResponse,
+  TokensResponse,
+  ExplainResponse,
+  StatsResponse,
+  SchemaResponse,
+  EngineResponse,
+} from './types';
 
 const BASE = '/api';
 
@@ -23,4 +30,9 @@ export const api = {
   stats: () => get<StatsResponse>('/stats'),
   tables: () => get<{ tables: string[] }>('/tables'),
   schema: (table: string) => get<SchemaResponse>(`/schema/${table}`),
+
+  // 成员B引擎通道：SQL -> LogicalPlan -> Executor
+  engineExecute: (sql: string) => post<EngineResponse>('/engine/execute', sql),
+  engineTables: () => get<{ tables: string[] }>('/engine/tables'),
+  engineSchema: (table: string) => get<SchemaResponse>(`/engine/schema/${table}`),
 };
