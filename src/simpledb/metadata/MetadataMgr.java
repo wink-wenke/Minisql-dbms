@@ -80,4 +80,8 @@ public class MetadataMgr implements CatalogReader, CatalogWriter {
    public List<ColumnDef> getColumns(String tableName, Transaction tx) {
       return tblmgr.getColumns(tableName, tx);
    }
+
+   public List<String> listTables(Transaction tx) {
+      return tblmgr.listTables(tx);
+   }
 }

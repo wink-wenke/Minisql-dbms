@@ -25,7 +25,9 @@ public class Schema {
     * @param length the conceptual length of a string field.
     */
    public void addField(String fldname, int type, int length) {
-      fields.add(fldname);
+      if (!fields.contains(fldname)) {
+         fields.add(fldname);
+      }
       info.put(fldname, new FieldInfo(type, length));
    }
    

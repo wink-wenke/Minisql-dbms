@@ -119,6 +119,18 @@ class TableMgr {
       }
    }
 
+   public List<String> listTables(Transaction tx) {
+      List<String> tables = new ArrayList<>();
+      TableScan tcat = new TableScan(tx, "tblcat", tcatLayout);
+      try {
+         while (tcat.next())
+            tables.add(tcat.getString("tblname"));
+         return tables;
+      } finally {
+         tcat.close();
+      }
+   }
+
    public boolean columnExists(String tblname, String fldname, Transaction tx) {
       return getColumn(tblname, fldname, tx) != null;
    }

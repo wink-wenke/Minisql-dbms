@@ -29,6 +29,10 @@ public class PersistenceTest extends TestBase {
       return "PersistenceTest - data and catalog survive a restart";
    }
 
+   protected void cleanup() {
+      resetDatabase(DB);
+   }
+
    protected void cases() throws Exception {
       resetDatabase(DB);
 
@@ -110,7 +114,17 @@ public class PersistenceTest extends TestBase {
    }
 
    private Predicate compare(String column, String op, int value) {
-      return new Predicate(new Term(new Expression(column), op,
-         new Expression(new Constant(value))));
+      CompOp compOp;
+      switch (op) {
+         case "=":  compOp = CompOp.EQUALS; break;
+         case "!=": compOp = CompOp.NOT_EQUALS; break;
+         case "<":  compOp = CompOp.LESS; break;
+         case "<=": compOp = CompOp.LESS_EQUALS; break;
+         case ">":  compOp = CompOp.GREATER; break;
+         case ">=": compOp = CompOp.GREATER_EQUALS; break;
+         default: throw new IllegalArgumentException("unknown op: " + op);
+      }
+      return new Predicate(new Term(new Expression(column),
+         new Expression(new Constant(value)), compOp));
    }
 }

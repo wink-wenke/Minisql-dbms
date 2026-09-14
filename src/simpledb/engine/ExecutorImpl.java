@@ -49,6 +49,8 @@ public class ExecutorImpl implements Executor {
          return executeInsert((InsertPlan) plan, tx);
       if (plan instanceof DeletePlan)
          return executeDelete((DeletePlan) plan, tx);
+      if (plan instanceof UpdatePlan)
+         return executeUpdate((UpdatePlan) plan, tx);
       return executeQuery(plan, tx);
    }
 
@@ -80,6 +82,15 @@ public class ExecutorImpl implements Executor {
    private ExecuteResult executeDelete(DeletePlan plan, Transaction tx) {
       requireTable(plan.tableName(), tx);
       int affected = storageEngine.deleteRows(plan.tableName(), plan.predicate(), tx);
+      return ExecuteResult.updateResult(affected);
+   }
+
+   private ExecuteResult executeUpdate(UpdatePlan plan, Transaction tx) {
+      requireTable(plan.tableName(), tx);
+      if (!catalog.columnExists(plan.tableName(), plan.targetField(), tx))
+         throw EngineException.columnNotFound(plan.tableName(), plan.targetField());
+      int affected = storageEngine.updateRows(plan.tableName(), plan.targetField(),
+            plan.newValue(), plan.predicate(), tx);
       return ExecuteResult.updateResult(affected);
    }
 

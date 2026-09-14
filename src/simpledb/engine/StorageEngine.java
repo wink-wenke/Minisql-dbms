@@ -14,5 +14,8 @@ public interface StorageEngine {
 
    int deleteRows(String tableName, Predicate predicate, Transaction tx);
 
+   int updateRows(String tableName, String targetField, Expression newValue,
+                  Predicate predicate, Transaction tx);
+
    int getRecordCount(String tableName, Transaction tx);
 }
