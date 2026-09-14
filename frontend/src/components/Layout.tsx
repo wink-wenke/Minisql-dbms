@@ -1,12 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
 const navItems = [
-  { to: '/', label: 'Architecture', icon: '◇' },
-  { to: '/playground', label: 'Playground', icon: '▶' },
-  { to: '/pipeline', label: 'Pipeline', icon: '→' },
-  { to: '/storage', label: 'Storage', icon: '▦' },
-  { to: '/tests', label: 'Tests', icon: '✓' },
-  { to: '/fuzz', label: 'Fuzz', icon: '⚡' },
+  { to: '/', label: '架构总览', icon: '◇' },
+  { to: '/playground', label: 'SQL 演练场', icon: '▶' },
+  { to: '/pipeline', label: '查询流水线', icon: '→' },
+  { to: '/storage', label: '存储', icon: '▦' },
+  { to: '/tests', label: '测试', icon: '✓' },
+  { to: '/fuzz', label: '模糊测试', icon: '⚡' },
+  { to: '/engine', label: '引擎通道', icon: '⚙' },
 ];
 
 export default function Layout() {

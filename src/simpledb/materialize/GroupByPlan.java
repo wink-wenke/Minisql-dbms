@@ -42,6 +42,7 @@ public class GroupByPlan implements Plan {
     * countofid → id, maxofname → name
     */
    private String extractSourceField(String aggFieldName) {
+      if (aggFieldName.startsWith("avgof"))   return aggFieldName.substring(5);
       if (aggFieldName.startsWith("countof")) return aggFieldName.substring(7);
       if (aggFieldName.startsWith("maxof"))   return aggFieldName.substring(5);
       if (aggFieldName.startsWith("minof"))   return aggFieldName.substring(5);

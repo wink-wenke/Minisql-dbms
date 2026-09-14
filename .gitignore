@@ -65,3 +65,27 @@ bufmgr_test_tmp/
 
 # Build output
 out/
+
+# 运行测试 / 启动服务时生成的数据库目录
+advancedb/
+boundarydb/
+bdebugdb/
+enginedemo/
+enginetestdb/
+metadatamgrtest/
+testdb/
+walkthroughdb/
+
+# 演示 / 测试数据库目录
+demodb/
+fullpipelinedb/
+
+# 文档生成中间产物
+output/
+captured_cases.json
+
+# 编译辅助：javac 参数文件（由 find/Get-ChildItem 生成）
+sources.txt
+
+# 工作台数据
+.workbuddy/

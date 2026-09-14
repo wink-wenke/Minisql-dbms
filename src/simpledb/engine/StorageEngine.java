@@ -1,5 +1,6 @@
 package simpledb.engine;
 
+import java.util.Map;
 import simpledb.query.*;
 import simpledb.record.RID;
 import simpledb.tx.Transaction;
@@ -14,8 +15,8 @@ public interface StorageEngine {
 
    int deleteRows(String tableName, Predicate predicate, Transaction tx);
 
-   int updateRows(String tableName, String targetField, Expression newValue,
-                  Predicate predicate, Transaction tx);
-
    int getRecordCount(String tableName, Transaction tx);
+
+   int updateRows(String tableName, Map<String,Constant> assignments,
+                  Predicate predicate, Transaction tx);
 }

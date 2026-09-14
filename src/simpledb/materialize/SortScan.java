@@ -28,6 +28,12 @@ public class SortScan implements Scan {
     */
    public SortScan(List<TempTable> runs, RecordComparator comp) {
       this.comp = comp;
+      // 输入为空时 runs 可能是空表：排序结果就是没有行，而不是抛异常。
+      if (runs.isEmpty()) {
+         s1 = null;
+         hasmore1 = false;
+         return;
+      }
       s1 = (UpdateScan) runs.get(0).open();
       hasmore1 = s1.next();
       if (runs.size() > 1) {
@@ -45,6 +51,8 @@ public class SortScan implements Scan {
     */
    public void beforeFirst() {
       currentscan = null;
+      if (s1 == null)
+         return;
       s1.beforeFirst();
       hasmore1 = s1.next();
       if (s2 != null) {
@@ -88,7 +96,8 @@ public class SortScan implements Scan {
     * @see simpledb.query.Scan#close()
     */
    public void close() {
-      s1.close();
+      if (s1 != null)
+         s1.close();
       if (s2 != null)
          s2.close();
    }

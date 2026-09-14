@@ -3,13 +3,13 @@ import { api } from '../api/client';
 import type { ExecuteResponse } from '../api/types';
 
 const EXAMPLES = [
-  { label: 'Create Table', sql: "CREATE TABLE student(\n    id INT,\n    name VARCHAR(50),\n    age INT\n);" },
-  { label: 'Insert Data', sql: "DELETE FROM student;\n\nINSERT INTO student(id, name, age)\nVALUES (1, 'Alice', 20);\n\nINSERT INTO student(id, name, age)\nVALUES (2, 'Bob', 17);\n\nINSERT INTO student(id, name, age)\nVALUES (3, 'Charlie', 22);" },
-  { label: 'Select', sql: "SELECT * FROM student;" },
-  { label: 'WHERE', sql: "SELECT id, name\nFROM student\nWHERE age > 18;" },
-  { label: 'Complex', sql: "SELECT name, age\nFROM student\nWHERE age > 18 AND id != 3;" },
-  { label: 'Delete', sql: "DELETE FROM student\nWHERE id = 2;" },
-  { label: 'Error Demo', sql: "SELECT score FROM student;" },
+  { label: '建表', sql: "CREATE TABLE student(\n    id INT,\n    name VARCHAR(50),\n    age INT\n);" },
+  { label: '插入数据', sql: "DELETE FROM student;\n\nINSERT INTO student(id, name, age)\nVALUES (1, 'Alice', 20);\n\nINSERT INTO student(id, name, age)\nVALUES (2, 'Bob', 17);\n\nINSERT INTO student(id, name, age)\nVALUES (3, 'Charlie', 22);" },
+  { label: '查询', sql: "SELECT * FROM student;" },
+  { label: 'WHERE 条件', sql: "SELECT id, name\nFROM student\nWHERE age > 18;" },
+  { label: '复杂查询', sql: "SELECT name, age\nFROM student\nWHERE age > 18 AND id != 3;" },
+  { label: '删除', sql: "DELETE FROM student\nWHERE id = 2;" },
+  { label: '错误演示', sql: "SELECT score FROM student;" },
 ];
 
 export default function Playground() {
@@ -53,7 +53,7 @@ export default function Playground() {
         }
       }
     } catch (e) {
-      setResult({ type: 'UPDATE', error: { type: 'NETWORK', message: String(e) } });
+      setResult({ type: 'UPDATE', error: { type: '网络错误', message: String(e) } });
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export default function Playground() {
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-surface">
         <div className="flex items-center gap-3">
           <span className="text-accent font-mono text-sm">▶</span>
-          <span className="text-sm font-semibold">SQL Playground</span>
+          <span className="text-sm font-semibold">SQL 演练场</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-text-muted font-mono">Ctrl+Enter</span>
@@ -86,7 +86,7 @@ export default function Playground() {
             disabled={loading}
             className="px-3 py-1.5 bg-accent text-bg-primary rounded text-xs font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
           >
-            {loading ? 'Running...' : 'Run'}
+            {loading ? '执行中…' : '执行'}
           </button>
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function Playground() {
               value={sql}
               onChange={(e) => setSql(e.target.value)}
               className="w-full h-full resize-none bg-bg-primary text-text-primary p-3 font-mono text-sm leading-relaxed focus:outline-none placeholder:text-text-muted"
-              placeholder="Enter SQL statement..."
+              placeholder="输入 SQL 语句..."
               spellCheck={false}
             />
           </div>
@@ -125,10 +125,10 @@ export default function Playground() {
           {/* Tabs */}
           <div className="flex border-b border-border bg-bg-surface">
             <div className="px-4 py-2 text-xs font-medium text-accent border-b-2 border-accent">
-              Result
+              结果
             </div>
             <div className="px-4 py-2 text-xs text-text-secondary">
-              Output
+              输出
             </div>
           </div>
 
@@ -136,14 +136,14 @@ export default function Playground() {
           <div className="flex-1 overflow-auto p-3">
             {!result && (
               <div className="text-text-muted text-sm text-center mt-20">
-                Execute a SQL query to see results here.
+                执行一条 SQL 语句后在这里查看结果。
               </div>
             )}
 
             {result?.error && (
               <div className="rounded border border-red/30 bg-red/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-red text-xs font-mono font-bold">ERROR</span>
+                  <span className="text-red text-xs font-mono font-bold">错误</span>
                   <span className="text-red/70 text-xs font-mono">[{result.error.type}]</span>
                 </div>
                 <div className="text-sm text-red">{result.error.message}</div>
@@ -177,7 +177,7 @@ export default function Playground() {
                         <tr key={i} className={`border-b border-border-subtle ${i % 2 === 0 ? 'bg-bg-primary' : 'bg-bg-surface/50'}`}>
                           {row.map((val, j) => (
                             <td key={j} className="px-3 py-1.5 text-xs font-mono text-text-primary">
-                              {val === null ? <span className="text-text-muted">NULL</span> : String(val)}
+                              {val === null ? <span className="text-text-muted">空值</span> : String(val)}
                             </td>
                           ))}
                         </tr>
@@ -191,7 +191,7 @@ export default function Playground() {
             {result && !result.error && result.type === 'UPDATE' && (
               <div className="rounded border border-green/30 bg-green/5 p-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-green text-xs font-mono font-bold">OK</span>
+                  <span className="text-green text-xs font-mono font-bold">正常</span>
                   <span className="text-sm text-text-secondary">
                     {result.affectedRows} record{result.affectedRows !== 1 ? 's' : ''} processed
                   </span>
@@ -204,7 +204,7 @@ export default function Playground() {
 
             {result && !result.error && result.type === 'EXPLAIN' && result.planText && (
               <div>
-                <div className="text-xs text-text-muted mb-2 font-mono">Execution Plan</div>
+                <div className="text-xs text-text-muted mb-2 font-mono">执行计划</div>
                 <pre className="text-sm font-mono text-text-primary bg-bg-surface border border-border rounded p-3 whitespace-pre-wrap">
                   {result.planText}
                 </pre>

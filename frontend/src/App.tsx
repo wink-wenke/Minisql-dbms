@@ -6,6 +6,7 @@ import Pipeline from './pages/Pipeline';
 import Storage from './pages/Storage';
 import Tests from './pages/Tests';
 import FuzzDashboard from './pages/FuzzDashboard';
+import Engine from './pages/Engine';
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="/storage" element={<Storage />} />
           <Route path="/tests" element={<Tests />} />
           <Route path="/fuzz" element={<FuzzDashboard />} />
+          <Route path="/engine" element={<Engine />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -25,10 +25,10 @@ function TokenTable({ tokens }: { tokens: TokenInfo[] }) {
       <table className="w-full text-xs font-mono">
         <thead>
           <tr className="border-b border-border">
-            <th className="px-2 py-1 text-left text-text-muted">Type</th>
-            <th className="px-2 py-1 text-left text-text-muted">Lexeme</th>
-            <th className="px-2 py-1 text-right text-text-muted">Ln</th>
-            <th className="px-2 py-1 text-right text-text-muted">Col</th>
+            <th className="px-2 py-1 text-left text-text-muted">类型</th>
+            <th className="px-2 py-1 text-left text-text-muted">词素</th>
+            <th className="px-2 py-1 text-right text-text-muted">行</th>
+            <th className="px-2 py-1 text-right text-text-muted">列</th>
           </tr>
         </thead>
         <tbody>
@@ -87,22 +87,22 @@ export default function Pipeline() {
 
   const stages = [
     {
-      name: 'Token Stream',
+      name: '词法单元流',
       ready: !!result?.tokens,
       content: result?.tokens && <TokenTable tokens={result.tokens} />,
     },
     {
-      name: 'Plan (Before)',
+      name: '计划（优化前）',
       ready: !!result?.explain,
-      content: result?.explain && <PlanTree text={result.explain.planBefore} title="Unoptimized Plan" />,
+      content: result?.explain && <PlanTree text={result.explain.planBefore} title="未优化的计划" />,
     },
     {
-      name: 'Plan (After)',
+      name: '计划（优化后）',
       ready: !!result?.explain,
-      content: result?.explain && <PlanTree text={result.explain.planAfter} title="Optimized Plan" />,
+      content: result?.explain && <PlanTree text={result.explain.planAfter} title="优化后的计划" />,
     },
     {
-      name: 'Result',
+      name: '执行结果',
       ready: !!result?.execute,
       content: result?.execute && !result.execute.error && (
         <div>
@@ -143,7 +143,7 @@ export default function Pipeline() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-2 border-b border-border bg-bg-surface">
         <span className="text-blue font-mono text-sm">→</span>
-        <span className="text-sm font-semibold">Pipeline Explorer</span>
+        <span className="text-sm font-semibold">流水线浏览器</span>
         <span className="text-xs text-text-muted">— Visualize the complete SQL compilation pipeline</span>
       </div>
 
@@ -155,14 +155,14 @@ export default function Pipeline() {
             onChange={(e) => setSql(e.target.value)}
             className="flex-1 bg-bg-primary text-text-primary px-3 py-2 font-mono text-sm rounded border border-border focus:border-accent focus:outline-none resize-none"
             rows={2}
-            placeholder="Enter SQL to trace through the pipeline..."
+            placeholder="输入 SQL 以查看流水线处理过程..."
           />
           <button
             onClick={trace}
             disabled={loading}
             className="px-4 py-2 bg-accent text-bg-primary rounded text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 self-end"
           >
-            {loading ? 'Tracing...' : 'Trace'}
+            {loading ? '追踪中…' : '追踪'}
           </button>
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function Pipeline() {
       <div className="flex-1 overflow-auto p-4">
         {!result && !loading && (
           <div className="text-text-muted text-sm text-center mt-20">
-            Enter SQL and click "Trace" to visualize the pipeline.
+            输入 SQL 后点击「追踪」查看流水线处理过程。
           </div>
         )}
 
@@ -197,15 +197,15 @@ export default function Pipeline() {
                 )}
                 {stage.ready && activeStage !== i && (
                   <div className="px-3 py-2 text-xs text-text-muted font-mono">
-                    {stage.name === 'Token Stream' && `${(result?.tokens || []).length} tokens`}
-                    {stage.name === 'Plan (Before)' && 'Click to expand'}
-                    {stage.name === 'Plan (After)' && result?.explain ? `${result.explain.blocksAccessed} blocks` : 'Click to expand'}
-                    {stage.name === 'Result' && result?.execute?.type === 'QUERY' ? `${result.execute.rows?.length ?? 0} rows` : 'Click to expand'}
+                    {stage.name === '词法单元流' && `${(result?.tokens || []).length} 个词法单元`}
+                    {stage.name === '计划（优化前）' && '点击展开'}
+                    {stage.name === '计划（优化后）' && result?.explain ? `${result.explain.blocksAccessed} 个块` : '点击展开'}
+                    {stage.name === '执行结果' && result?.execute?.type === 'QUERY' ? `${result.execute.rows?.length ?? 0} 行` : '点击展开'}
                   </div>
                 )}
                 {!stage.ready && (
                   <div className="px-3 py-4 text-xs text-text-muted text-center">
-                    Waiting for data...
+                    等待数据…
                   </div>
                 )}
               </div>

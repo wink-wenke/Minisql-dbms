@@ -32,31 +32,31 @@ export default function Storage() {
       <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-surface">
         <div className="flex items-center gap-3">
           <span className="text-green font-mono text-sm">▦</span>
-          <span className="text-sm font-semibold">Storage Inspector</span>
+          <span className="text-sm font-semibold">存储检查器</span>
         </div>
         <button
           onClick={refresh}
           disabled={loading}
           className="px-3 py-1.5 border border-border rounded text-xs text-text-secondary hover:text-text-primary hover:border-text-muted transition-colors"
         >
-          {loading ? 'Refreshing...' : 'Refresh'}
+          {loading ? '刷新中…' : '刷新'}
         </button>
       </div>
 
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {/* Cache Statistics */}
         <div className="grid grid-cols-5 gap-3">
-          <StatCard label="Access" value={cache?.accessCount ?? 0} color="text-text-primary" />
-          <StatCard label="Hits" value={cache?.hitCount ?? 0} color="text-green" />
-          <StatCard label="Misses" value={cache?.missCount ?? 0} color="text-red" />
-          <StatCard label="Evictions" value={cache?.evictionCount ?? 0} color="text-yellow" />
-          <StatCard label="Hit Rate" value={cache ? `${(cache.hitRate * 100).toFixed(1)}%` : '—'} color="text-accent" />
+          <StatCard label="访问次数" value={cache?.accessCount ?? 0} color="text-text-primary" />
+          <StatCard label="命中次数" value={cache?.hitCount ?? 0} color="text-green" />
+          <StatCard label="未命中次数" value={cache?.missCount ?? 0} color="text-red" />
+          <StatCard label="淘汰次数" value={cache?.evictionCount ?? 0} color="text-yellow" />
+          <StatCard label="命中率" value={cache ? `${(cache.hitRate * 100).toFixed(1)}%` : '—'} color="text-accent" />
         </div>
 
         {/* Hit Rate Bar */}
         {cache && (
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-2">CACHE HIT RATE</div>
+            <div className="text-xs text-text-muted font-mono mb-2">缓存命中率</div>
             <div className="w-full h-4 bg-bg-primary rounded-full overflow-hidden">
               <div
                 className="h-full bg-green rounded-full transition-all duration-500"
@@ -74,21 +74,21 @@ export default function Storage() {
         {/* Buffer Pool Info */}
         <div className="grid grid-cols-2 gap-4">
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-3">BUFFER POOL</div>
+            <div className="text-xs text-text-muted font-mono mb-3">缓冲池</div>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm text-text-secondary">Buffer Size</span>
+                <span className="text-sm text-text-secondary">缓冲池大小</span>
                 <span className="text-sm font-mono text-text-primary">{stats?.bufferSize ?? '—'} slots</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-text-secondary">Page Size</span>
+                <span className="text-sm text-text-secondary">页面大小</span>
                 <span className="text-sm font-mono text-text-primary">{stats?.pageSize ?? '—'} bytes</span>
               </div>
             </div>
           </div>
 
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-3">TABLES</div>
+            <div className="text-xs text-text-muted font-mono mb-3">数据表</div>
             {stats && stats.tables.length > 0 ? (
               <div className="space-y-1">
                 {stats.tables.map((t) => (
@@ -99,7 +99,7 @@ export default function Storage() {
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-text-muted">No tables yet</div>
+              <div className="text-sm text-text-muted">暂无数据表</div>
             )}
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function Storage() {
         {/* Buffer Visualization */}
         {stats && (
           <div className="border border-border rounded-lg p-4 bg-bg-surface">
-            <div className="text-xs text-text-muted font-mono mb-3">BUFFER POOL VISUALIZATION</div>
+            <div className="text-xs text-text-muted font-mono mb-3">缓冲池可视化</div>
             <div className="grid grid-cols-8 gap-2">
               {Array.from({ length: stats.bufferSize }, (_, i) => {
                 const used = i < (cache?.accessCount ?? 0) % stats.bufferSize;

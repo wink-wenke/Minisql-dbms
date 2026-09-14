@@ -37,9 +37,9 @@ public class MockStorageEngine implements StorageEngine {
       return rowsToDelete;
    }
 
-   public int updateRows(String tableName, String targetField, Expression newValue,
+   public int updateRows(String tableName, Map<String,Constant> assignments,
                          Predicate predicate, Transaction tx) {
-      calls.add("update:" + tableName + ":" + targetField);
+      calls.add("update:" + tableName);
       return rowsToDelete;
    }
 

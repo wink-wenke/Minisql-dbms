@@ -87,10 +87,14 @@ public class ExecutorImpl implements Executor {
 
    private ExecuteResult executeUpdate(UpdatePlan plan, Transaction tx) {
       requireTable(plan.tableName(), tx);
-      if (!catalog.columnExists(plan.tableName(), plan.targetField(), tx))
-         throw EngineException.columnNotFound(plan.tableName(), plan.targetField());
-      int affected = storageEngine.updateRows(plan.tableName(), plan.targetField(),
-            plan.newValue(), plan.predicate(), tx);
+      Map<String,Constant> assignments = new HashMap<>();
+      List<String> cols = plan.columns();
+      List<Constant> vals = plan.values();
+      if (cols.size() != vals.size())
+         throw EngineException.arityMismatch(plan.tableName(), cols.size(), vals.size());
+      for (int i = 0; i < cols.size(); i++)
+         assignments.put(cols.get(i), vals.get(i));
+      int affected = storageEngine.updateRows(plan.tableName(), assignments, plan.predicate(), tx);
       return ExecuteResult.updateResult(affected);
    }
 
