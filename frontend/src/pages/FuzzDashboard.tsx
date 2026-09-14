@@ -60,19 +60,19 @@ export default function FuzzDashboard() {
         if (r.error) {
           results.push({ sql, result: '错误', message: r.error.message });
         } else {
-          results.push({ sql, result: '正常', message: r.type === 'QUERY' ? `${r.rows?.length ?? 0} rows` : '正常' });
+          results.push({ sql, result: '正常', message: r.type === 'QUERY' ? `${r.rows?.length ?? 0} 行` : '正常' });
         }
       } catch (e) {
-        results.push({ sql, result: '错误', message: `CRASH: ${e}` });
+        results.push({ sql, result: '错误', message: `崩溃: ${e}` });
       }
       setEntries([...results]);
     }
     setRunning(false);
   };
 
-  const crashes = entries.filter((e) => e.message.startsWith('CRASH')).length;
+  const crashes = entries.filter((e) => e.message.startsWith('崩溃')).length;
   const ok = entries.filter((e) => e.result === '正常').length;
-  const errors = entries.filter((e) => e.result === '错误' && !e.message.startsWith('CRASH')).length;
+  const errors = entries.filter((e) => e.result === '错误' && !e.message.startsWith('崩溃')).length;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -96,7 +96,7 @@ export default function FuzzDashboard() {
             disabled={running}
             className="px-3 py-1.5 bg-accent text-bg-primary rounded text-xs font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
           >
-            {running ? `Running... (${entries.length}/${count})` : 'Run Fuzz'}
+            {running ? `Running... (${entries.length}/${count})` : '开始模糊测试'}
           </button>
         </div>
       </div>
@@ -126,7 +126,7 @@ export default function FuzzDashboard() {
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-1 font-mono text-xs">
           {entries.map((e, i) => (
-            <div key={i} className={`flex gap-2 py-0.5 ${e.message.startsWith('CRASH') ? 'text-yellow' : e.result === '错误' ? 'text-red' : 'text-text-muted'}`}>
+            <div key={i} className={`flex gap-2 py-0.5 ${e.message.startsWith('崩溃') ? 'text-yellow' : e.result === '错误' ? 'text-red' : 'text-text-muted'}`}>
               <span className="w-8 text-right text-text-muted">{i + 1}</span>
               <span className={e.result === '正常' ? 'text-green' : ''}>{e.result === '正常' ? 'PASS' : 'FAIL'}</span>
               <span className="truncate flex-1">{e.sql}</span>
@@ -135,7 +135,7 @@ export default function FuzzDashboard() {
           ))}
           {entries.length === 0 && !running && (
             <div className="text-center text-text-muted py-20">
-              Click "Run Fuzz" to generate and test random SQL inputs
+              点击「开始模糊测试」生成并测试随机 SQL 输入
             </div>
           )}
         </div>

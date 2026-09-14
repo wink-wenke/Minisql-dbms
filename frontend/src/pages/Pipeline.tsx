@@ -87,22 +87,22 @@ export default function Pipeline() {
 
   const stages = [
     {
-      name: 'Token Stream',
+      name: '词法单元流',
       ready: !!result?.tokens,
       content: result?.tokens && <TokenTable tokens={result.tokens} />,
     },
     {
-      name: 'Plan (Before)',
+      name: '计划（优化前）',
       ready: !!result?.explain,
       content: result?.explain && <PlanTree text={result.explain.planBefore} title="未优化的计划" />,
     },
     {
-      name: 'Plan (After)',
+      name: '计划（优化后）',
       ready: !!result?.explain,
       content: result?.explain && <PlanTree text={result.explain.planAfter} title="优化后的计划" />,
     },
     {
-      name: 'Result',
+      name: '执行结果',
       ready: !!result?.execute,
       content: result?.execute && !result.execute.error && (
         <div>
@@ -162,7 +162,7 @@ export default function Pipeline() {
             disabled={loading}
             className="px-4 py-2 bg-accent text-bg-primary rounded text-sm font-medium hover:bg-accent-hover transition-colors disabled:opacity-50 self-end"
           >
-            {loading ? 'Tracing...' : 'Trace'}
+            {loading ? '追踪中…' : '追踪'}
           </button>
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function Pipeline() {
       <div className="flex-1 overflow-auto p-4">
         {!result && !loading && (
           <div className="text-text-muted text-sm text-center mt-20">
-            Enter SQL and click "Trace" to visualize the pipeline.
+            输入 SQL 后点击「追踪」查看流水线处理过程。
           </div>
         )}
 
@@ -197,15 +197,15 @@ export default function Pipeline() {
                 )}
                 {stage.ready && activeStage !== i && (
                   <div className="px-3 py-2 text-xs text-text-muted font-mono">
-                    {stage.name === 'Token Stream' && `${(result?.tokens || []).length} tokens`}
-                    {stage.name === 'Plan (Before)' && 'Click to expand'}
-                    {stage.name === 'Plan (After)' && result?.explain ? `${result.explain.blocksAccessed} blocks` : 'Click to expand'}
-                    {stage.name === 'Result' && result?.execute?.type === 'QUERY' ? `${result.execute.rows?.length ?? 0} rows` : 'Click to expand'}
+                    {stage.name === '词法单元流' && `${(result?.tokens || []).length} 个词法单元`}
+                    {stage.name === '计划（优化前）' && '点击展开'}
+                    {stage.name === '计划（优化后）' && result?.explain ? `${result.explain.blocksAccessed} 个块` : '点击展开'}
+                    {stage.name === '执行结果' && result?.execute?.type === 'QUERY' ? `${result.execute.rows?.length ?? 0} 行` : '点击展开'}
                   </div>
                 )}
                 {!stage.ready && (
                   <div className="px-3 py-4 text-xs text-text-muted text-center">
-                    Waiting for data...
+                    等待数据…
                   </div>
                 )}
               </div>

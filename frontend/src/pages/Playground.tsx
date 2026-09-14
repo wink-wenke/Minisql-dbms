@@ -3,13 +3,13 @@ import { api } from '../api/client';
 import type { ExecuteResponse } from '../api/types';
 
 const EXAMPLES = [
-  { label: 'Create Table', sql: "CREATE TABLE student(\n    id INT,\n    name VARCHAR(50),\n    age INT\n);" },
-  { label: 'Insert Data', sql: "DELETE FROM student;\n\nINSERT INTO student(id, name, age)\nVALUES (1, 'Alice', 20);\n\nINSERT INTO student(id, name, age)\nVALUES (2, 'Bob', 17);\n\nINSERT INTO student(id, name, age)\nVALUES (3, 'Charlie', 22);" },
-  { label: 'Select', sql: "SELECT * FROM student;" },
-  { label: 'WHERE', sql: "SELECT id, name\nFROM student\nWHERE age > 18;" },
-  { label: 'Complex', sql: "SELECT name, age\nFROM student\nWHERE age > 18 AND id != 3;" },
-  { label: 'Delete', sql: "DELETE FROM student\nWHERE id = 2;" },
-  { label: 'Error Demo', sql: "SELECT score FROM student;" },
+  { label: '建表', sql: "CREATE TABLE student(\n    id INT,\n    name VARCHAR(50),\n    age INT\n);" },
+  { label: '插入数据', sql: "DELETE FROM student;\n\nINSERT INTO student(id, name, age)\nVALUES (1, 'Alice', 20);\n\nINSERT INTO student(id, name, age)\nVALUES (2, 'Bob', 17);\n\nINSERT INTO student(id, name, age)\nVALUES (3, 'Charlie', 22);" },
+  { label: '查询', sql: "SELECT * FROM student;" },
+  { label: 'WHERE 条件', sql: "SELECT id, name\nFROM student\nWHERE age > 18;" },
+  { label: '复杂查询', sql: "SELECT name, age\nFROM student\nWHERE age > 18 AND id != 3;" },
+  { label: '删除', sql: "DELETE FROM student\nWHERE id = 2;" },
+  { label: '错误演示', sql: "SELECT score FROM student;" },
 ];
 
 export default function Playground() {
@@ -53,7 +53,7 @@ export default function Playground() {
         }
       }
     } catch (e) {
-      setResult({ type: 'UPDATE', error: { type: 'NETWORK', message: String(e) } });
+      setResult({ type: 'UPDATE', error: { type: '网络错误', message: String(e) } });
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export default function Playground() {
             disabled={loading}
             className="px-3 py-1.5 bg-accent text-bg-primary rounded text-xs font-medium hover:bg-accent-hover transition-colors disabled:opacity-50"
           >
-            {loading ? 'Running...' : 'Run'}
+            {loading ? '执行中…' : '执行'}
           </button>
         </div>
       </div>
@@ -125,10 +125,10 @@ export default function Playground() {
           {/* Tabs */}
           <div className="flex border-b border-border bg-bg-surface">
             <div className="px-4 py-2 text-xs font-medium text-accent border-b-2 border-accent">
-              Result
+              结果
             </div>
             <div className="px-4 py-2 text-xs text-text-secondary">
-              Output
+              输出
             </div>
           </div>
 
@@ -136,7 +136,7 @@ export default function Playground() {
           <div className="flex-1 overflow-auto p-3">
             {!result && (
               <div className="text-text-muted text-sm text-center mt-20">
-                Execute a SQL query to see results here.
+                执行一条 SQL 语句后在这里查看结果。
               </div>
             )}
 

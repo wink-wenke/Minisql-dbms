@@ -39,7 +39,7 @@ export default function Storage() {
           disabled={loading}
           className="px-3 py-1.5 border border-border rounded text-xs text-text-secondary hover:text-text-primary hover:border-text-muted transition-colors"
         >
-          {loading ? 'Refreshing...' : 'Refresh'}
+          {loading ? '刷新中…' : '刷新'}
         </button>
       </div>
 

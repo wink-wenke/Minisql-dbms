@@ -5,24 +5,24 @@ import type { StatsResponse } from '../api/types';
 
 const layers = [
   {
-    name: 'SQL Compiler',
+    name: 'SQL 编译器',
     color: 'border-accent',
     bg: 'bg-accent/5',
-    desc: 'Lexer → Parser → AST → Semantic → Logical Plan',
+    desc: '词法 → 语法 → 抽象语法树 → 语义 → 逻辑计划',
     interfaces: ['Lexer.tokenize()', 'Parser.query()', 'SemanticAnalyzer.analyze()', 'Planner.createQueryPlan()'],
   },
   {
-    name: 'Execution Engine',
+    name: '执行引擎',
     color: 'border-blue',
     bg: 'bg-blue/5',
-    desc: 'Plan → Scan → Execute → Result',
+    desc: '计划 → 扫描 → 执行 → 结果',
     interfaces: ['Executor.execute()', 'PlanConverter.convert()', 'CatalogReader / CatalogWriter'],
   },
   {
-    name: 'Storage Engine',
+    name: '存储引擎',
     color: 'border-green',
     bg: 'bg-green/5',
-    desc: 'Page → Buffer → File → Disk',
+    desc: '页面 → 缓冲 → 文件 → 磁盘',
     interfaces: ['PageManager.read/write()', 'BufferManager.getPage()', 'FileManager'],
   },
 ];
@@ -41,7 +41,7 @@ export default function Architecture() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-text-primary mb-1">系统架构</h1>
         <p className="text-text-secondary text-sm">
-          MiniSQL DBMS — A complete SQL pipeline from text to disk
+          MiniSQL 数据库管理系统 —— 从文本到磁盘的完整 SQL 流水线
         </p>
       </div>
 
@@ -60,13 +60,13 @@ export default function Architecture() {
                 onClick={() => navigate('/playground')}
                 className="px-3 py-1.5 bg-accent text-bg-primary rounded text-xs font-medium hover:bg-accent-hover transition-colors"
               >
-                Open Playground →
+                打开 SQL 演练场 →
               </button>
             </div>
           </div>
 
           {/* Arrow */}
-          <div className="flex justify-center text-text-muted text-xs font-mono">↓ SQL Input ↓</div>
+          <div className="flex justify-center text-text-muted text-xs font-mono">↓ SQL 输入 ↓</div>
 
           {/* Middle Layers */}
           {layers.map((layer) => (
