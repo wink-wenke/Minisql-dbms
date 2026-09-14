@@ -4,7 +4,7 @@ import type { ExecuteResponse } from '../api/types';
 
 const EXAMPLES = [
   { label: 'Create Table', sql: "CREATE TABLE student(\n    id INT,\n    name VARCHAR(50),\n    age INT\n);" },
-  { label: 'Insert Data', sql: "INSERT INTO student(id, name, age)\nVALUES (1, 'Alice', 20);\n\nINSERT INTO student(id, name, age)\nVALUES (2, 'Bob', 17);\n\nINSERT INTO student(id, name, age)\nVALUES (3, 'Charlie', 22);" },
+  { label: 'Insert Data', sql: "DELETE FROM student;\n\nINSERT INTO student(id, name, age)\nVALUES (1, 'Alice', 20);\n\nINSERT INTO student(id, name, age)\nVALUES (2, 'Bob', 17);\n\nINSERT INTO student(id, name, age)\nVALUES (3, 'Charlie', 22);" },
   { label: 'Select', sql: "SELECT * FROM student;" },
   { label: 'WHERE', sql: "SELECT id, name\nFROM student\nWHERE age > 18;" },
   { label: 'Complex', sql: "SELECT name, age\nFROM student\nWHERE age > 18 AND id != 3;" },
