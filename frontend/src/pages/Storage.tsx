@@ -46,11 +46,11 @@ export default function Storage() {
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {/* Cache Statistics */}
         <div className="grid grid-cols-5 gap-3">
-          <StatCard label="Access" value={cache?.accessCount ?? 0} color="text-text-primary" />
-          <StatCard label="Hits" value={cache?.hitCount ?? 0} color="text-green" />
-          <StatCard label="Misses" value={cache?.missCount ?? 0} color="text-red" />
-          <StatCard label="Evictions" value={cache?.evictionCount ?? 0} color="text-yellow" />
-          <StatCard label="Hit Rate" value={cache ? `${(cache.hitRate * 100).toFixed(1)}%` : '—'} color="text-accent" />
+          <StatCard label="访问次数" value={cache?.accessCount ?? 0} color="text-text-primary" />
+          <StatCard label="命中次数" value={cache?.hitCount ?? 0} color="text-green" />
+          <StatCard label="未命中次数" value={cache?.missCount ?? 0} color="text-red" />
+          <StatCard label="淘汰次数" value={cache?.evictionCount ?? 0} color="text-yellow" />
+          <StatCard label="命中率" value={cache ? `${(cache.hitRate * 100).toFixed(1)}%` : '—'} color="text-accent" />
         </div>
 
         {/* Hit Rate Bar */}
