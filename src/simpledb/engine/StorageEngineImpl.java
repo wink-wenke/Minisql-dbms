@@ -1,5 +1,6 @@
 package simpledb.engine;
 
+import java.util.Map;
 import simpledb.metadata.MetadataMgr;
 import simpledb.plan.*;
 import simpledb.query.*;
@@ -58,26 +59,6 @@ public class StorageEngineImpl implements StorageEngine {
       }
    }
 
-   public int updateRows(String tableName, String targetField, Expression newValue,
-                         Predicate predicate, Transaction tx) {
-      requireTable(tableName, tx);
-      Plan p = new TablePlan(tx, tableName, metadataMgr);
-      p = new SelectPlan(p, predicate);
-      UpdateScan us = (UpdateScan) p.open();
-      int count = 0;
-      try {
-         while (us.next()) {
-            Constant val = newValue.evaluate(us);
-            us.setVal(targetField, val);
-            count++;
-         }
-         return count;
-      }
-      finally {
-         us.close();
-      }
-   }
-
    public int getRecordCount(String tableName, Transaction tx) {
       Scan scan = scan(tableName, tx);
       int count = 0;
@@ -88,6 +69,27 @@ public class StorageEngineImpl implements StorageEngine {
       }
       finally {
          scan.close();
+      }
+   }
+
+   public int updateRows(String tableName, Map<String,Constant> assignments,
+                         Predicate predicate, Transaction tx) {
+      requireTable(tableName, tx);
+      Plan p = new TablePlan(tx, tableName, metadataMgr);
+      if (predicate != null)
+         p = new SelectPlan(p, predicate);
+      UpdateScan us = (UpdateScan) p.open();
+      int count = 0;
+      try {
+         while (us.next()) {
+            for (Map.Entry<String,Constant> e : assignments.entrySet())
+               setUpdateValue(us, tableName, e.getKey(), e.getValue());
+            count++;
+         }
+         return count;
+      }
+      finally {
+         us.close();
       }
    }
 
@@ -107,6 +109,26 @@ public class StorageEngineImpl implements StorageEngine {
       }
       catch (ClassCastException e) {
          us.delete();
+         throw EngineException.typeMismatch(tableName, column,
+               "value " + value + " does not match the declared column type");
+      }
+   }
+
+   /**
+    * Writes one value for an UPDATE. Unlike {@link #setValue}, a rejected
+    * UPDATE must NOT delete the row it was trying to modify: the row stays
+    * intact and the error is reported instead of leaving a half-updated
+    * record behind.
+    */
+   private void setUpdateValue(UpdateScan us, String tableName, String column, Constant value) {
+      try {
+         us.setVal(column, value);
+      }
+      catch (NullPointerException e) {
+         throw EngineException.typeMismatch(tableName, column,
+               "value " + value + " is not an INT");
+      }
+      catch (ClassCastException e) {
          throw EngineException.typeMismatch(tableName, column,
                "value " + value + " does not match the declared column type");
       }
