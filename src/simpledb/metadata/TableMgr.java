@@ -1,6 +1,7 @@
 package simpledb.metadata;
 
 import java.util.*;
+import java.util.LinkedHashSet;
 import static java.sql.Types.*;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
@@ -115,6 +116,18 @@ class TableMgr {
          return false;
       }
       finally {
+         tcat.close();
+      }
+   }
+
+   public List<String> listTables(Transaction tx) {
+      Set<String> tableSet = new LinkedHashSet<>();
+      TableScan tcat = new TableScan(tx, "tblcat", tcatLayout);
+      try {
+         while (tcat.next())
+            tableSet.add(tcat.getString("tblname"));
+         return new ArrayList<>(tableSet);
+      } finally {
          tcat.close();
       }
    }

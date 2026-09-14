@@ -58,6 +58,26 @@ public class StorageEngineImpl implements StorageEngine {
       }
    }
 
+   public int updateRows(String tableName, String targetField, Expression newValue,
+                         Predicate predicate, Transaction tx) {
+      requireTable(tableName, tx);
+      Plan p = new TablePlan(tx, tableName, metadataMgr);
+      p = new SelectPlan(p, predicate);
+      UpdateScan us = (UpdateScan) p.open();
+      int count = 0;
+      try {
+         while (us.next()) {
+            Constant val = newValue.evaluate(us);
+            us.setVal(targetField, val);
+            count++;
+         }
+         return count;
+      }
+      finally {
+         us.close();
+      }
+   }
+
    public int getRecordCount(String tableName, Transaction tx) {
       Scan scan = scan(tableName, tx);
       int count = 0;

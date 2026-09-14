@@ -23,6 +23,8 @@ public abstract class TestBase {
 
    protected abstract void cases() throws Exception;
 
+   protected void cleanup() { }
+
    public final boolean run() {
       System.out.println("=== " + suiteName() + " ===");
       try {
@@ -30,6 +32,9 @@ public abstract class TestBase {
       }
       catch (Throwable t) {
          failures.add("suite aborted: " + describe(t));
+      }
+      finally {
+         cleanup();
       }
       for (String failure : failures)
          System.out.println("  FAIL  " + failure);
@@ -57,6 +62,16 @@ public abstract class TestBase {
    protected void assertEquals(String what, Object expected, Object actual) {
       boolean same = expected == null ? actual == null : expected.equals(actual);
       if (!same)
+         throw new AssertionError(what + ": expected <" + expected + "> but was <" + actual + ">");
+   }
+
+   protected void assertEquals(String what, long expected, long actual) {
+      if (expected != actual)
+         throw new AssertionError(what + ": expected <" + expected + "> but was <" + actual + ">");
+   }
+
+   protected void assertEquals(String what, double expected, double actual) {
+      if (Double.compare(expected, actual) != 0)
          throw new AssertionError(what + ": expected <" + expected + "> but was <" + actual + ">");
    }
 

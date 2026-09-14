@@ -37,6 +37,12 @@ public class MockStorageEngine implements StorageEngine {
       return rowsToDelete;
    }
 
+   public int updateRows(String tableName, String targetField, Expression newValue,
+                         Predicate predicate, Transaction tx) {
+      calls.add("update:" + tableName + ":" + targetField);
+      return rowsToDelete;
+   }
+
    public int getRecordCount(String tableName, Transaction tx) {
       calls.add("count:" + tableName);
       return 0;

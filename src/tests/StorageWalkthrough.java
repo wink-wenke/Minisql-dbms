@@ -136,8 +136,8 @@ public class StorageWalkthrough {
    }
 
    private static Predicate eq(String column, int value) {
-      return new Predicate(new Term(new Expression(column), "=",
-         new Expression(new Constant(value))));
+      return new Predicate(new Term(new Expression(column),
+         new Expression(new Constant(value)), CompOp.EQUALS));
    }
 
    private static void section(String title) {

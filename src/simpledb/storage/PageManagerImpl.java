@@ -16,11 +16,7 @@ public class PageManagerImpl implements PageManager {
 
     @Override
     public PageId allocatePage() {
-        // 追加一个全零页到默认文件
-        // 这里使用 append 方式分配新页
-        // 具体文件名由调用方通过 writePage 指定
-        throw new UnsupportedOperationException(
-            "Use allocatePage(String fileName) instead");
+        return allocatePage("default.tbl");
     }
 
     /**

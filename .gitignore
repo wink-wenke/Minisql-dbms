@@ -59,3 +59,9 @@ Thumbs.db
 *.ldb
 *.mdb
 studentdb/
+fullpipelinedb/
+persistdb/
+bufmgr_test_tmp/
+
+# Build output
+out/

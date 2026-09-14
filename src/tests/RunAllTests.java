@@ -11,8 +11,15 @@ import java.util.*;
 public class RunAllTests {
    public static void main(String[] args) {
       List<TestBase> suites = new ArrayList<>();
+      // storage module unit tests
+      suites.add(new BlockIdTest());
+      suites.add(new PageTest());
+      suites.add(new CacheStatsTest());
+      suites.add(new BufferMgrTest());
+      suites.add(new LogMgrTest());
+      // engine + integration tests
       suites.add(new ExecutorUnitTest());
-      suites.add(new EngineTest());
+      suites.add(new FullPipelineTest());
       suites.add(new PersistenceTest());
 
       int failed = 0;
