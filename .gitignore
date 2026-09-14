@@ -76,5 +76,16 @@ metadatamgrtest/
 testdb/
 walkthroughdb/
 
+# 演示 / 测试数据库目录
+demodb/
+fullpipelinedb/
+
+# 文档生成中间产物
+output/
+captured_cases.json
+
+# 编译辅助：javac 参数文件（由 find/Get-ChildItem 生成）
+sources.txt
+
 # 工作台数据
 .workbuddy/
