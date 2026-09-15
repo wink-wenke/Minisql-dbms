@@ -10,7 +10,7 @@ public class Page {
 
    //数据缓冲区
    public Page(int blocksize) {
-      bb = ByteBuffer.allocateDirect(blocksize);
+      bb = ByteBuffer.allocateDirect(blocksize); //分配allocate直接内存缓冲区
    }
    
    //日志页

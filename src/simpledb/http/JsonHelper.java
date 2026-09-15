@@ -115,7 +115,7 @@ public class JsonHelper {
         sb.append(",\"hitCount\":").append(stats.getHitCount());
         sb.append(",\"missCount\":").append(stats.getMissCount());
         sb.append(",\"evictionCount\":").append(stats.getEvictionCount());
-        sb.append(",\"hitRate\":").append(String.format("%.4f", stats.hitRate()));
+        sb.append(",\"hitRate\":").append(stats.hitRate());
         sb.append("}");
         return sb.toString();
     }

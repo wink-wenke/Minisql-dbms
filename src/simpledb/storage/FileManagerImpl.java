@@ -3,6 +3,7 @@ package simpledb.storage;
 import simpledb.file.BlockId;
 import simpledb.file.FileMgr;
 import simpledb.file.Page;
+import simpledb.file.PageId;
 
 /**
  * FileManager 的实现。内部持有 FileMgr，方法直接委托。
@@ -43,6 +44,16 @@ public class FileManagerImpl implements FileManager {
     @Override
     public int blockSize() {
         return fm.blockSize();
+    }
+
+    @Override
+    public PageId allocatePage(String fileName) {
+        return fm.allocatePage(fileName);
+    }
+
+    @Override
+    public void freePage(String fileName, int pageNum) {
+        fm.freePage(fileName, pageNum);
     }
 
     private BlockId toBlockId(PageId pageId) {

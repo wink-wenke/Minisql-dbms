@@ -1,4 +1,4 @@
-package simpledb.storage;
+package simpledb.file;
 
 /**
  * 页的唯一标识。由文件名和页号组成。

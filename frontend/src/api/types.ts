@@ -98,3 +98,37 @@ export interface AnalyzeResponse {
   checks: AnalyzeCheck[];
   error?: { type: string; message: string };
 }
+
+// ===== Storage Test Types =====
+
+export interface CacheEvent {
+  seq: number;
+  type: string;       // ALLOC, READ, WRITE, ACCESS
+  file: string;
+  block: number;
+  hit: boolean;
+}
+
+export interface AllocatedPage {
+  pageNum: number;
+  fileName: string;
+}
+
+export interface StorageTestState {
+  allocatedPages: AllocatedPage[];
+  stats: CacheStats;
+  slots: BufferSlotInfo[];
+  accessHistory: CacheEvent[];
+}
+
+export interface StorageTestResult {
+  success: boolean;
+  error?: string;
+  pageNum?: number;
+  hit?: boolean;
+  cacheEvent?: CacheEvent;
+  stats?: CacheStats;
+  slots?: BufferSlotInfo[];
+  value?: number;
+  offset?: number;
+}

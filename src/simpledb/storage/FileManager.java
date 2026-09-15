@@ -1,5 +1,7 @@
 package simpledb.storage;
 
+import simpledb.file.PageId;
+
 /**
  * 文件管理器接口。管理数据库目录下的文件读写。
  * 提供底层磁盘 I/O 能力。
@@ -30,4 +32,14 @@ public interface FileManager {
      * 获取页大小（字节）。
      */
     int blockSize();
+
+    /**
+     * 在指定文件中分配一个新页（优先复用空闲页）。
+     */
+    PageId allocatePage(String fileName);
+
+    /**
+     * 释放一个页，清零后加入空闲列表。
+     */
+    void freePage(String fileName, int pageNum);
 }

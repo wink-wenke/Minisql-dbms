@@ -1,6 +1,7 @@
 package simpledb.file;
 
-//blockid是磁盘块的标识符，包含文件名和块号
+//blockid是磁盘块的标识符，包含 文件名和块号
+//用于定位磁盘块的地址
 public class BlockId {
    private String filename;
    private int blknum;

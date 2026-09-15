@@ -1,6 +1,7 @@
 package simpledb.storage;
 
 import java.util.List;
+import simpledb.file.PageId;
 
 /**
  * 缓存管理器接口。在内存中缓存磁盘页，减少 I/O。

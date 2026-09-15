@@ -50,7 +50,7 @@ public class Buffer {
    }
 
 
-   //分配磁盘块到缓冲区
+   //把磁盘块加载到某个槽位,真正加载，并且发生磁盘IO
    void assignToBlock(BlockId b) {
       //如果当前存在脏页，先刷盘
       flush();
