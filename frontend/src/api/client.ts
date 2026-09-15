@@ -1,4 +1,4 @@
-import type { ExecuteResponse, TokensResponse, ExplainResponse, AstResponse, StatsResponse, SchemaResponse, BufferSlotsResponse, AnalyzeResponse } from './types';
+import type { ExecuteResponse, TokensResponse, ExplainResponse, AstResponse, StatsResponse, SchemaResponse, BufferSlotsResponse, AnalyzeResponse, StorageTestState, StorageTestResult } from './types';
 
 const BASE = '/api';
 const TIMEOUT_MS = 10000;
@@ -41,4 +41,15 @@ export const api = {
   tables: () => get<{ tables: string[] }>('/tables'),
   schema: (table: string) => get<SchemaResponse>(`/schema/${table}`),
   bufferSlots: () => get<BufferSlotsResponse>('/buffer-slots'),
+  // Storage test
+  storageState: () => get<StorageTestState>('/storage/test/state'),
+  storageAlloc: () => post<StorageTestResult>('/storage/test/alloc', ''),
+  storageFree: (pageNum: number) => post<StorageTestResult>('/storage/test/free', String(pageNum)),
+  storageWrite: (pageNum: number, offset: number, value: number) =>
+    post<StorageTestResult>('/storage/test/write', `${pageNum},${offset},${value}`),
+  storageRead: (pageNum: number, offset: number) =>
+    post<StorageTestResult>('/storage/test/read', `${pageNum},${offset}`),
+  storageAccess: (pageNum: number) => post<StorageTestResult>('/storage/test/access', String(pageNum)),
+  storagePolicy: (policy: string) => post<{ success: boolean; policy: string }>('/storage/test/policy', policy),
+  storageReset: () => post<StorageTestState>('/storage/test/reset', ''),
 };

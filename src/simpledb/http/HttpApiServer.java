@@ -5,6 +5,7 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.file.*;
 import java.util.List;
+import java.util.Map;
 
 import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
@@ -28,6 +29,7 @@ import simpledb.shared.ExecuteResult;
 import simpledb.shared.ColumnDef;
 import simpledb.storage.BufferManager;
 import simpledb.storage.CacheStats;
+import simpledb.storage.StorageTestManager;
 
 /**
  * 基于 JDK 内置 HttpServer 的轻量级 REST API 服务器。
@@ -37,10 +39,12 @@ public class HttpApiServer {
     private final SimpleDB db;
     private final HttpServer server;
     private final String staticDir;
+    private final StorageTestManager storageTestMgr;
 
     public HttpApiServer(SimpleDB db, int port, String staticDir) throws IOException {
         this.db = db;
         this.staticDir = staticDir;
+        this.storageTestMgr = new StorageTestManager(db.getBufferManager(), db.bufferMgr());
         this.server = HttpServer.create(new InetSocketAddress(port), 0);
 
         registerRoutes();
@@ -57,6 +61,14 @@ public class HttpApiServer {
         server.createContext("/api/tables", this::handleTables);
         server.createContext("/api/schema/", this::handleSchema);
         server.createContext("/api/buffer-slots", this::handleBufferSlots);
+        server.createContext("/api/storage/test/alloc", this::handleStorageAlloc);
+        server.createContext("/api/storage/test/free", this::handleStorageFree);
+        server.createContext("/api/storage/test/write", this::handleStorageWrite);
+        server.createContext("/api/storage/test/read", this::handleStorageRead);
+        server.createContext("/api/storage/test/access", this::handleStorageAccess);
+        server.createContext("/api/storage/test/policy", this::handleStoragePolicy);
+        server.createContext("/api/storage/test/state", this::handleStorageState);
+        server.createContext("/api/storage/test/reset", this::handleStorageReset);
         server.createContext("/", this::handleStatic);
     }
 
@@ -439,6 +451,101 @@ public class HttpApiServer {
         } catch (Exception e) {
             sendJson(exchange, 500, JsonHelper.error("ENGINE", e.getMessage(), 0, 0));
         }
+    }
+
+    // ==================== Storage Test Handlers ====================
+
+    private void handleStorageAlloc(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) { sendError(exchange, 405, "Method not allowed"); return; }
+        sendJson(exchange, 200, toJsonMap(storageTestMgr.allocPage()));
+    }
+
+    private void handleStorageFree(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) { sendError(exchange, 405, "Method not allowed"); return; }
+        String body = readBody(exchange);
+        int pageNum = Integer.parseInt(body.trim());
+        sendJson(exchange, 200, toJsonMap(storageTestMgr.freePage(pageNum)));
+    }
+
+    private void handleStorageWrite(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) { sendError(exchange, 405, "Method not allowed"); return; }
+        String body = readBody(exchange);
+        String[] parts = body.split(",");
+        int pageNum = Integer.parseInt(parts[0].trim());
+        int offset = Integer.parseInt(parts[1].trim());
+        int value = Integer.parseInt(parts[2].trim());
+        sendJson(exchange, 200, toJsonMap(storageTestMgr.writePage(pageNum, offset, value)));
+    }
+
+    private void handleStorageRead(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) { sendError(exchange, 405, "Method not allowed"); return; }
+        String body = readBody(exchange);
+        String[] parts = body.split(",");
+        int pageNum = Integer.parseInt(parts[0].trim());
+        int offset = Integer.parseInt(parts[1].trim());
+        sendJson(exchange, 200, toJsonMap(storageTestMgr.readPage(pageNum, offset)));
+    }
+
+    private void handleStorageAccess(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) { sendError(exchange, 405, "Method not allowed"); return; }
+        String body = readBody(exchange);
+        int pageNum = Integer.parseInt(body.trim());
+        sendJson(exchange, 200, toJsonMap(storageTestMgr.accessPage(pageNum)));
+    }
+
+    private void handleStoragePolicy(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) { sendError(exchange, 405, "Method not allowed"); return; }
+        String body = readBody(exchange).trim();
+        storageTestMgr.setPolicy(body);
+        sendJson(exchange, 200, "{\"success\":true,\"policy\":\"" + body + "\"}");
+    }
+
+    private void handleStorageState(HttpExchange exchange) throws IOException {
+        if (!"GET".equals(exchange.getRequestMethod())) { sendError(exchange, 405, "Method not allowed"); return; }
+        sendJson(exchange, 200, toJsonMap(storageTestMgr.getState()));
+    }
+
+    private void handleStorageReset(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) { sendError(exchange, 405, "Method not allowed"); return; }
+        sendJson(exchange, 200, toJsonMap(storageTestMgr.reset()));
+    }
+
+    /**
+     * 将 Map<String, Object> 序列化为 JSON。
+     * 支持 String, Number, Boolean, List, Map 类型。
+     */
+    private String toJsonMap(Map<String, Object> map) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        boolean first = true;
+        for (Map.Entry<String, Object> e : map.entrySet()) {
+            if (!first) sb.append(",");
+            first = false;
+            sb.append("\"").append(JsonHelper.escape(e.getKey())).append("\":");
+            sb.append(toJsonValue(e.getValue()));
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private String toJsonValue(Object val) {
+        if (val == null) return "null";
+        if (val instanceof String) return "\"" + JsonHelper.escape((String) val) + "\"";
+        if (val instanceof Number) return val.toString();
+        if (val instanceof Boolean) return val.toString();
+        if (val instanceof Map) return toJsonMap((Map<String, Object>) val);
+        if (val instanceof List) {
+            List<?> list = (List<?>) val;
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < list.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append(toJsonValue(list.get(i)));
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+        return "\"" + JsonHelper.escape(val.toString()) + "\"";
     }
 
     // ==================== Static File Serving ====================

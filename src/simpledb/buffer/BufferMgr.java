@@ -51,11 +51,12 @@ public class BufferMgr {
       }
    }
    
-   
+   //用于调度，决定该不该加载，选哪个槽位，等不等（其实主要是处理并发）
+   //整体流程，等待机制
    public synchronized Buffer pin(BlockId blk) {
       try {
          long timestamp = System.currentTimeMillis();
-         Buffer buff = tryToPin(blk);
+         Buffer buff = tryToPin(blk); //先尝试
          //如果没有可用缓冲区，等待一段时间后再尝试获取缓冲区
          while (buff == null && !waitingTooLong(timestamp)) {
             wait(MAX_TIME); //等待一段时间后再尝试获取缓冲区
@@ -104,6 +105,7 @@ public class BufferMgr {
       return System.currentTimeMillis() - starttime > MAX_TIME;
    }
    
+   //获取缓冲区真正的决策逻辑
    //尝试获取缓冲区，如果缓冲区已存在，则直接返回；如果不存在，则选择一个未被使用的缓冲区进行分配
    private Buffer tryToPin(BlockId blk) {
       Buffer buff = findExistingBuffer(blk);//查找缓冲区中是否已经存在该磁盘块
@@ -113,10 +115,10 @@ public class BufferMgr {
             System.out.println("GET " + blk + " HIT");
       } else {
          stats.recordMiss(); //缓存未命中 +1
-         buff = chooseUnpinnedBuffer(); //未命中，走淘汰策略
+         buff = chooseUnpinnedBuffer(); //选一个空闲槽位
          if (buff == null)
-            return null;
-         buff.assignToBlock(blk);
+            return null; //所有的槽位都被pin住，无空位
+         buff.assignToBlock(blk); //从磁盘读新块
          if (debug)
             System.out.println("GET " + blk + " MISS");
       }
@@ -126,6 +128,7 @@ public class BufferMgr {
       return buff;
    }
    
+   //遍历函数
    //查找缓冲区中是否已经存在该磁盘块,遍历整个缓冲池来逐个比对
    private Buffer findExistingBuffer(BlockId blk) {
       for (Buffer buff : bufferpool) {
@@ -140,7 +143,7 @@ public class BufferMgr {
    private Buffer chooseUnpinnedBuffer() {
       Buffer victim = null;
       for (Buffer buff : bufferpool) {
-         if (!buff.isPinned()) {
+         if (!buff.isPinned()) { //只选择没被pin住的
             if (victim == null) {
                victim = buff; //第一个空闲的作为候选
             } else if (policy == ReplacementPolicy.LRU) {
@@ -153,8 +156,10 @@ public class BufferMgr {
          }
       }
       if (victim != null) {
-         stats.recordEviction(); //记录淘汰次数
          BlockId old = victim.block();
+         if (old != null) {
+            stats.recordEviction(); // 只有真正替换已有页面时才计数
+         }
          if (debug)
             System.out.println("EVICT " + (old != null ? old : "null") + " policy=" + policy);
       }

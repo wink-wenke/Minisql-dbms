@@ -2,6 +2,7 @@ package simpledb.storage;
 
 import simpledb.file.BlockId;
 import simpledb.file.Page;
+import simpledb.file.PageId;
 import simpledb.buffer.Buffer;
 import simpledb.buffer.BufferMgr;
 import java.util.List;

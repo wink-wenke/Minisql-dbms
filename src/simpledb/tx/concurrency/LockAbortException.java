@@ -1,10 +1,6 @@
 package simpledb.tx.concurrency;
 
-/**
- * A runtime exception indicating that the transaction
- * needs to abort because a lock could not be obtained.
- * @author Edward Sciore
- */
+//超时报异常，不再循环等待尝试获取锁
 @SuppressWarnings("serial")
 public class LockAbortException extends RuntimeException {
    public LockAbortException() {

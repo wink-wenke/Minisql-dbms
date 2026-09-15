@@ -1,5 +1,7 @@
 package simpledb.storage;
 
+import simpledb.file.PageId;
+
 /**
  * 页管理器接口。提供页的分配、释放、读写能力。
  * 页大小固定为 4096 字节 (4KB)。
