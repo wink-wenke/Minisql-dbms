@@ -24,8 +24,10 @@ public class Lexer {
             "select", "from", "where", "and", "or", "not",
             "insert", "into", "values",
             "delete", "update", "set",
-            "create", "table", "view", "as", "index", "on",
-            "int", "varchar", "null", "order", "by", "group"
+            "create", "drop", "table", "view", "as", "index", "on",
+            "int", "varchar", "null", "order", "by", "group",
+            "if", "exists",
+            "explain", "asc", "desc"
     ));
 
     // 关键字字符串 -> TokenType 的映射
@@ -44,6 +46,7 @@ public class Lexer {
         KEYWORD_MAP.put("update",   TokenType.UPDATE);
         KEYWORD_MAP.put("set",      TokenType.SET);
         KEYWORD_MAP.put("create",   TokenType.CREATE);
+        KEYWORD_MAP.put("drop",     TokenType.CREATE);
         KEYWORD_MAP.put("table",    TokenType.TABLE);
         KEYWORD_MAP.put("view",     TokenType.VIEW);
         KEYWORD_MAP.put("as",       TokenType.AS);
@@ -55,6 +58,9 @@ public class Lexer {
         KEYWORD_MAP.put("order",    TokenType.ORDER);
         KEYWORD_MAP.put("by",       TokenType.BY);
         KEYWORD_MAP.put("group",    TokenType.GROUP);
+        KEYWORD_MAP.put("explain",  TokenType.EXPLAIN);
+        KEYWORD_MAP.put("asc",      TokenType.ASC);
+        KEYWORD_MAP.put("desc",     TokenType.DESC);
     }
 
     // ==================== 源文本与扫描状态 ====================

@@ -4,6 +4,7 @@ import java.util.*;
 import simpledb.tx.Transaction;
 import simpledb.metadata.*;
 import simpledb.parse.*;
+import simpledb.ast.*;
 import simpledb.query.*;
 import simpledb.record.Schema;
 import simpledb.materialize.SortPlan;
@@ -29,7 +30,8 @@ public class BasicQueryPlanner implements QueryPlanner {
       this.mdm = mdm;
    }
 
-   public Plan createPlan(QueryData data, Transaction tx) {
+   public Plan createPlan(AstNode astData, Transaction tx) {
+      SelectNode data = (SelectNode) astData;
       //Step 1: Create a plan for each mentioned table or view.
       List<Plan> plans = new ArrayList<>();
       List<String> tableNames = new ArrayList<>(data.tables());
@@ -38,7 +40,7 @@ public class BasicQueryPlanner implements QueryPlanner {
          String viewdef = mdm.getViewDef(tblname, tx);
          if (viewdef != null) {
             Parser parser = new Parser(viewdef);
-            QueryData viewdata = parser.query();
+            SelectNode viewdata = parser.query();
             plans.add(createPlan(viewdata, tx));
          } else {
             Plan tablePlan = new TablePlan(tx, tblname, mdm);
@@ -73,7 +75,7 @@ public class BasicQueryPlanner implements QueryPlanner {
       }
 
       //Step 5: Add ORDER BY sort plan (before projection, so sort field may not be selected)
-      List<String> orderby = data.orderby();
+      List<simpledb.ast.OrderByEntry> orderby = data.orderby();
       if (orderby != null && !orderby.isEmpty()) {
          p = new SortPlan(tx, p, orderby);
       }

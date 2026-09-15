@@ -3,6 +3,7 @@ package simpledb.plan;
 import simpledb.metadata.MetadataMgr;
 import simpledb.tx.Transaction;
 import simpledb.parse.*;
+import simpledb.ast.*;
 
 /**
  * SQL 编译器与执行计划的总入口。
@@ -10,7 +11,7 @@ import simpledb.parse.*;
  * 完整流水线：
  * <pre>
  *   SQL 文本
- *     → Parser（词法+语法分析）→ AST/数据对象
+ *     → Parser（词法+语法分析）→ AST 节点
  *     → SemanticAnalyzer（语义分析，检查表/列/类型）
  *     → QueryPlanner / UpdatePlanner（生成 Logical Plan）
  *     → Optimizer（查询优化：常量折叠、冗余消除）
@@ -46,7 +47,7 @@ public class Planner {
     public Plan createQueryPlan(String qry, Transaction tx) {
         // 1. 语法分析
         Parser parser = new Parser(qry);
-        QueryData data = parser.query();
+        SelectNode data = parser.query();
 
         // 2. 语义分析
         verifyQuery(data, tx);
@@ -70,24 +71,31 @@ public class Planner {
     public int executeUpdate(String cmd, Transaction tx) {
         // 1. 语法分析
         Parser parser = new Parser(cmd);
-        Object data = parser.updateCmd();
+        AstNode data = parser.updateCmd();
 
         // 2. 语义分析（CREATE 不需要）
         verifyUpdate(data, tx);
 
         // 3. 分派执行
-        if (data instanceof InsertData)
-            return uplanner.executeInsert((InsertData) data, tx);
-        else if (data instanceof DeleteData)
-            return uplanner.executeDelete((DeleteData) data, tx);
-        else if (data instanceof ModifyData)
-            return uplanner.executeModify((ModifyData) data, tx);
-        else if (data instanceof CreateTableData)
-            return uplanner.executeCreateTable((CreateTableData) data, tx);
-        else if (data instanceof CreateViewData)
-            return uplanner.executeCreateView((CreateViewData) data, tx);
-        else if (data instanceof CreateIndexData)
-            return uplanner.executeCreateIndex((CreateIndexData) data, tx);
+        if (data instanceof InsertNode)
+            return uplanner.executeInsert((InsertNode) data, tx);
+        else if (data instanceof DeleteNode)
+            return uplanner.executeDelete((DeleteNode) data, tx);
+        else if (data instanceof UpdateNode)
+            return uplanner.executeModify((UpdateNode) data, tx);
+        else if (data instanceof CreateTableNode)
+            return uplanner.executeCreateTable((CreateTableNode) data, tx);
+        else if (data instanceof CreateViewNode)
+            return uplanner.executeCreateView((CreateViewNode) data, tx);
+        else if (data instanceof CreateIndexNode)
+            return uplanner.executeCreateIndex((CreateIndexNode) data, tx);
+        else if (data instanceof DropTableNode)
+            return uplanner.executeDropTable((DropTableNode) data, tx);
+        else if (data instanceof ExplainNode) {
+            // EXPLAIN 不返回 affected rows，调用 explain() 获取计划文本
+            explain(((ExplainNode) data).originalSql(), tx);
+            return 0;
+        }
         else
             return 0;
     }
@@ -102,7 +110,7 @@ public class Planner {
 
         // 1. 语法分析
         Parser parser = new Parser(qry);
-        QueryData data = parser.query();
+        SelectNode data = parser.query();
 
         // 2. 语义分析
         verifyQuery(data, tx);
@@ -130,7 +138,7 @@ public class Planner {
     /**
      * 对 SELECT 语句做语义验证。
      */
-    private void verifyQuery(QueryData data, Transaction tx) {
+    private void verifyQuery(SelectNode data, Transaction tx) {
         if (mdm != null) {
             SemanticAnalyzer analyzer = new SemanticAnalyzer(mdm, tx);
             analyzer.analyzeQuery(data);
@@ -140,7 +148,7 @@ public class Planner {
     /**
      * 对更新语句做语义验证。
      */
-    private void verifyUpdate(Object data, Transaction tx) {
+    private void verifyUpdate(AstNode data, Transaction tx) {
         if (mdm != null) {
             SemanticAnalyzer analyzer = new SemanticAnalyzer(mdm, tx);
             analyzer.analyze(data);

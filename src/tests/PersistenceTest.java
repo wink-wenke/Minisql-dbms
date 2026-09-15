@@ -7,6 +7,7 @@ import simpledb.query.*;
 import simpledb.server.SimpleDB;
 import simpledb.shared.*;
 import simpledb.tx.Transaction;
+import tests.TestCleanup;
 
 /**
  * Covers the Level-2 acceptance criterion: whatever a run writes has to be
@@ -37,6 +38,8 @@ public class PersistenceTest extends TestBase {
       resetDatabase(DB);
 
       test("rows written before a restart are still there", () -> {
+        TestCleanup.init();
+      SimpleDB.DB_BASE_DIR = "tmp";
          SimpleDB first = new SimpleDB(DB);
          Transaction tx = first.newTx();
          Executor executor = new ExecutorImpl(first.mdMgr());

@@ -21,6 +21,12 @@ public class SimpleDB {
    public static int BUFFER_SIZE = 8;
    public static String LOG_FILE = "simpledb.log";
 
+   /**
+    * 数据库目录的基础路径。默认为当前目录（保持向后兼容）。
+    * 测试可设置为 "tmp" 将所有数据库统一到 tmp/ 下。
+    */
+   public static String DB_BASE_DIR = ".";
+
    private  FileMgr     fm;
    private  BufferMgr   bm;
    private  LogMgr      lm;
@@ -38,7 +44,7 @@ public class SimpleDB {
     * @param buffsize the number of buffers
     */
    public SimpleDB(String dirname, int blocksize, int buffsize) {
-      File dbDirectory = new File(dirname);
+      File dbDirectory = new File(DB_BASE_DIR, dirname);
       fm = new FileMgr(dbDirectory, blocksize);
       lm = new LogMgr(fm, LOG_FILE);
       bm = new BufferMgr(fm, lm, buffsize);
@@ -68,7 +74,7 @@ public class SimpleDB {
       UpdatePlanner up = new BasicUpdatePlanner(mdm);
 //    QueryPlanner qp = new HeuristicQueryPlanner(mdm);
 //    UpdatePlanner up = new IndexUpdatePlanner(mdm);
-      planner = new Planner(qp, up);
+      planner = new Planner(qp, up, mdm);
       tx.commit();
    }
    

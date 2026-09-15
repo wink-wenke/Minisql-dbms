@@ -83,7 +83,7 @@ public class Optimizer {
         if (plan instanceof SortPlan) {
             SortPlan sp = (SortPlan) plan;
             java.util.Set<String> needed = new java.util.HashSet<>(parentFields);
-            needed.addAll(sp.sortFields());
+            for (simpledb.ast.OrderByEntry e : sp.sortFields()) needed.add(e.field());
             Plan prunedChild = pruneFields(sp.child(), needed);
             return new SortPlan(sp.tx(), prunedChild, sp.sortFields());
         }
@@ -211,7 +211,14 @@ public class Optimizer {
         }
         if (plan instanceof SortPlan) {
             SortPlan sp = (SortPlan) plan;
-            return "Sort" + sp.sortFields().toString();
+            StringBuilder sb = new StringBuilder("Sort[");
+            List<simpledb.ast.OrderByEntry> entries = sp.sortFields();
+            for (int i = 0; i < entries.size(); i++) {
+                if (i > 0) sb.append(", ");
+                sb.append(entries.get(i));
+            }
+            sb.append("]");
+            return sb.toString();
         }
         if (plan instanceof SelectPlan) {
             SelectPlan sp = (SelectPlan) plan;

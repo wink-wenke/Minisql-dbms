@@ -1,11 +1,32 @@
 package simpledb.storage;
 
+import java.util.List;
+
 /**
  * 缓存管理器接口。在内存中缓存磁盘页，减少 I/O。
  * 支持 LRU 和 FIFO 两种替换策略。
  * 提供缓存命中/未命中统计。
  */
 public interface BufferManager {
+
+    class SlotInfo {
+        public final int slotIndex;
+        public final String fileName;
+        public final int blockNumber;
+        public final int pinCount;
+        public final boolean dirty;
+        public final int txnum;
+
+        public SlotInfo(int slotIndex, String fileName, int blockNumber,
+                        int pinCount, boolean dirty, int txnum) {
+            this.slotIndex = slotIndex;
+            this.fileName = fileName;
+            this.blockNumber = blockNumber;
+            this.pinCount = pinCount;
+            this.dirty = dirty;
+            this.txnum = txnum;
+        }
+    }
 
     /**
      * 获取指定页。如果页已在缓存中则直接返回（HIT），
@@ -40,4 +61,9 @@ public interface BufferManager {
      * 设置替换策略。
      */
     void setReplacementPolicy(ReplacementPolicy policy);
+
+    /**
+     * 获取缓冲池所有槽位的实时状态。
+     */
+    List<SlotInfo> getBufferSlots();
 }

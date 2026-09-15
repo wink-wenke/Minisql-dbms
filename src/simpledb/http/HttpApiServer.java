@@ -14,11 +14,15 @@ import simpledb.plan.Optimizer;
 import simpledb.plan.BasicQueryPlanner;
 import simpledb.parse.Lexer;
 import simpledb.parse.Parser;
-import simpledb.parse.QueryData;
 import simpledb.parse.Token;
 import simpledb.parse.BadSyntaxException;
 import simpledb.parse.SemanticAnalyzer;
 import simpledb.parse.SemanticError;
+import simpledb.ast.AstNode;
+import simpledb.ast.SelectNode;
+import simpledb.ast.InsertNode;
+import simpledb.ast.DeleteNode;
+import simpledb.ast.UpdateNode;
 import simpledb.metadata.MetadataMgr;
 import simpledb.shared.ExecuteResult;
 import simpledb.shared.ColumnDef;
@@ -47,9 +51,12 @@ public class HttpApiServer {
         server.createContext("/api/execute", this::handleExecute);
         server.createContext("/api/explain", this::handleExplain);
         server.createContext("/api/tokens", this::handleTokens);
+        server.createContext("/api/ast", this::handleAst);
+        server.createContext("/api/analyze", this::handleAnalyze);
         server.createContext("/api/stats", this::handleStats);
         server.createContext("/api/tables", this::handleTables);
         server.createContext("/api/schema/", this::handleSchema);
+        server.createContext("/api/buffer-slots", this::handleBufferSlots);
         server.createContext("/", this::handleStatic);
     }
 
@@ -74,29 +81,28 @@ public class HttpApiServer {
             long start = System.currentTimeMillis();
             Planner planner = db.planner();
 
-            // 判断是查询还是更新
+            // 根据首关键字判断语句类型
             String trimmed = sql.trim().toUpperCase();
-            if (trimmed.startsWith("SELECT") || trimmed.startsWith("EXPLAIN")) {
-                // EXPLAIN 作为查询处理
-                if (trimmed.startsWith("EXPLAIN")) {
-                    String explainSql = sql.trim().substring(7).trim();
-                    if (explainSql.endsWith(";")) explainSql = explainSql.substring(0, explainSql.length()-1);
-                    String result = planner.explain(explainSql, tx);
-                    tx.commit();
-                    long elapsed = System.currentTimeMillis() - start;
-                    sendJson(exchange, 200, "{\"success\":true,\"type\":\"EXPLAIN\",\"planText\":\""
-                        + JsonHelper.escape(result) + "\",\"timing\":" + elapsed + "}");
-                    return;
-                }
+            if (trimmed.startsWith("EXPLAIN")) {
+                // EXPLAIN：输出执行计划
+                Parser parser = new Parser(sql);
+                AstNode ast = parser.updateCmd();
+                String result = planner.explain(((simpledb.ast.ExplainNode) ast).originalSql(), tx);
+                tx.commit();
+                long elapsed = System.currentTimeMillis() - start;
+                sendJson(exchange, 200, "{\"success\":true,\"type\":\"EXPLAIN\",\"planText\":\""
+                    + JsonHelper.escape(result) + "\",\"timing\":" + elapsed + "}");
+            } else if (trimmed.startsWith("SELECT")) {
+                // SELECT：执行查询
                 Plan plan = planner.createQueryPlan(sql, tx);
                 ExecuteResult result = executePlan(plan, tx);
                 tx.commit();
                 long elapsed = System.currentTimeMillis() - start;
                 String json = JsonHelper.toJson(result);
-                // 在 JSON 末尾插入 timing
                 json = json.substring(0, json.length()-1) + ",\"timing\":" + elapsed + "}";
                 sendJson(exchange, 200, json);
             } else {
+                // INSERT / DELETE / UPDATE / CREATE / DROP
                 int affected = planner.executeUpdate(sql, tx);
                 tx.commit();
                 long elapsed = System.currentTimeMillis() - start;
@@ -123,10 +129,21 @@ public class HttpApiServer {
         String sql = readBody(exchange);
         Transaction tx = db.newTx();
         try {
+            // 如果以 EXPLAIN 开头，剥离前缀提取内部 SELECT
+            String trimmed = sql.trim();
+            if (trimmed.toUpperCase().startsWith("EXPLAIN")) {
+                trimmed = trimmed.substring(7).trim();
+            }
+            if (!trimmed.toUpperCase().startsWith("SELECT")) {
+                tx.rollback();
+                sendJson(exchange, 200, JsonHelper.error("SEMANTIC", "执行计划仅支持 SELECT 查询语句", 0, 0));
+                return;
+            }
+
             // 解析
             Plan rawPlan, optPlan;
-            Parser parser = new Parser(sql);
-            QueryData data = parser.query();
+            Parser parser = new Parser(trimmed);
+            simpledb.ast.SelectNode data = parser.query();
 
             // 语义分析
             MetadataMgr mdm = db.mdMgr();
@@ -168,6 +185,178 @@ public class HttpApiServer {
         } catch (Exception e) {
             sendJson(exchange, 200, JsonHelper.error("LEXICAL", e.getMessage(), 0, 0));
         }
+    }
+
+    private void handleAst(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) {
+            sendError(exchange, 405, "Method not allowed");
+            return;
+        }
+        String sql = readBody(exchange);
+        try {
+            Parser parser = new Parser(sql);
+            AstNode data;
+            String trimmed = sql.trim().toUpperCase();
+            if (trimmed.startsWith("SELECT")) {
+                data = parser.query();
+            } else {
+                data = parser.updateCmd();
+            }
+            String astJson = JsonHelper.toJsonAst(data);
+            // 包装为 { "ast": ..., "type": "..." }
+            String typeName = data.getClass().getSimpleName().replace("Data", "");
+            String response = "{\"ast\":" + astJson + ",\"type\":\"" + typeName + "\"}";
+            sendJson(exchange, 200, response);
+        } catch (BadSyntaxException e) {
+            sendJson(exchange, 200, JsonHelper.error("SYNTAX", e.getMessage(), e.getLine(), e.getColumn()));
+        } catch (Exception e) {
+            sendJson(exchange, 200, JsonHelper.error("SYNTAX", e.getMessage(), 0, 0));
+        }
+    }
+
+    private void handleAnalyze(HttpExchange exchange) throws IOException {
+        if (!"POST".equals(exchange.getRequestMethod())) {
+            sendError(exchange, 405, "Method not allowed");
+            return;
+        }
+        String sql = readBody(exchange);
+        Transaction tx = db.newTx();
+        try {
+            String trimmed = sql.trim().toUpperCase();
+            MetadataMgr mdm = db.mdMgr();
+            java.util.List<String> checks = new java.util.ArrayList<>();
+
+            if (trimmed.startsWith("SELECT") || trimmed.startsWith("EXPLAIN")) {
+                Parser parser = new Parser(sql);
+                SelectNode selectData;
+                if (trimmed.startsWith("EXPLAIN")) {
+                    AstNode ast = parser.updateCmd();
+                    selectData = ((simpledb.ast.ExplainNode) ast).query();
+                } else {
+                    selectData = (SelectNode) parser.query();
+                }
+
+                // 检查表是否存在
+                for (String tbl : selectData.tables()) {
+                    if (mdm.tableExists(tbl, tx)) {
+                        checks.add("{\"name\":\"表 '" + tbl + "' 存在性\",\"status\":\"pass\",\"message\":\"表 '" + tbl + "' 已存在于数据库中\"}");
+                    } else {
+                        checks.add("{\"name\":\"表 '" + tbl + "' 存在性\",\"status\":\"fail\",\"message\":\"表 '" + tbl + "' 不存在于数据库中\"}");
+                        tx.commit();
+                        sendAnalyzeResult(exchange, false, checks);
+                        return;
+                    }
+                }
+
+                // 检查列是否存在
+                simpledb.record.Schema combinedSchema = new simpledb.record.Schema();
+                for (String tbl : selectData.tables()) {
+                    simpledb.record.Layout layout = mdm.getLayout(tbl, tx);
+                    combinedSchema.addAll(layout.schema());
+                }
+                for (String fld : selectData.fields()) {
+                    if (fld.equals("*")) continue;
+                    if (combinedSchema.hasField(fld)) {
+                        checks.add("{\"name\":\"列 '" + fld + "' 存在性\",\"status\":\"pass\",\"message\":\"列 '" + fld + "' 存在于表中\"}");
+                    } else {
+                        checks.add("{\"name\":\"列 '" + fld + "' 存在性\",\"status\":\"fail\",\"message\":\"列 '" + fld + "' 不存在于表 " + selectData.tables() + "\"}");
+                        tx.commit();
+                        sendAnalyzeResult(exchange, false, checks);
+                        return;
+                    }
+                }
+
+                // 完整语义分析（类型检查等）
+                SemanticAnalyzer analyzer = new SemanticAnalyzer(mdm, tx);
+                analyzer.analyzeQuery(selectData);
+                checks.add("{\"name\":\"完整语义分析\",\"status\":\"pass\",\"message\":\"类型检查、谓词验证均通过\"}");
+
+            } else if (trimmed.startsWith("INSERT")) {
+                Parser parser = new Parser(sql);
+                InsertNode insertData = parser.insert();
+
+                // 检查表是否存在
+                String tbl = insertData.tableName();
+                if (mdm.tableExists(tbl, tx)) {
+                    checks.add("{\"name\":\"表 '" + tbl + "' 存在性\",\"status\":\"pass\",\"message\":\"表 '" + tbl + "' 已存在于数据库中\"}");
+                } else {
+                    checks.add("{\"name\":\"表 '" + tbl + "' 存在性\",\"status\":\"fail\",\"message\":\"表 '" + tbl + "' 不存在于数据库中\"}");
+                    tx.commit();
+                    sendAnalyzeResult(exchange, false, checks);
+                    return;
+                }
+
+                SemanticAnalyzer analyzer = new SemanticAnalyzer(mdm, tx);
+                analyzer.analyzeInsert(insertData);
+                checks.add("{\"name\":\"INSERT 语义分析\",\"status\":\"pass\",\"message\":\"列数、列名、值类型均正确\"}");
+
+            } else if (trimmed.startsWith("DELETE")) {
+                Parser parser = new Parser(sql);
+                DeleteNode deleteData = parser.delete();
+
+                String tbl = deleteData.tableName();
+                if (mdm.tableExists(tbl, tx)) {
+                    checks.add("{\"name\":\"表 '" + tbl + "' 存在性\",\"status\":\"pass\",\"message\":\"表 '" + tbl + "' 已存在于数据库中\"}");
+                } else {
+                    checks.add("{\"name\":\"表 '" + tbl + "' 存在性\",\"status\":\"fail\",\"message\":\"表 '" + tbl + "' 不存在于数据库中\"}");
+                    tx.commit();
+                    sendAnalyzeResult(exchange, false, checks);
+                    return;
+                }
+
+                SemanticAnalyzer analyzer = new SemanticAnalyzer(mdm, tx);
+                analyzer.analyzeDelete(deleteData);
+                checks.add("{\"name\":\"DELETE 语义分析\",\"status\":\"pass\",\"message\":\"WHERE 谓词验证通过\"}");
+
+            } else if (trimmed.startsWith("UPDATE")) {
+                Parser parser = new Parser(sql);
+                UpdateNode updateData = parser.modify();
+
+                String tbl = updateData.tableName();
+                if (mdm.tableExists(tbl, tx)) {
+                    checks.add("{\"name\":\"表 '" + tbl + "' 存在性\",\"status\":\"pass\",\"message\":\"表 '" + tbl + "' 已存在于数据库中\"}");
+                } else {
+                    checks.add("{\"name\":\"表 '" + tbl + "' 存在性\",\"status\":\"fail\",\"message\":\"表 '" + tbl + "' 不存在于数据库中\"}");
+                    tx.commit();
+                    sendAnalyzeResult(exchange, false, checks);
+                    return;
+                }
+
+                SemanticAnalyzer analyzer = new SemanticAnalyzer(mdm, tx);
+                analyzer.analyzeUpdate(updateData);
+                checks.add("{\"name\":\"UPDATE 语义分析\",\"status\":\"pass\",\"message\":\"列名、类型、谓词验证均通过\"}");
+
+            } else {
+                // CREATE / DROP 等 DDL 不需要语义检查
+                checks.add("{\"name\":\"DDL 语句\",\"status\":\"pass\",\"message\":\"DDL 语句无需语义检查\"}");
+                tx.commit();
+                sendAnalyzeResult(exchange, true, checks);
+                return;
+            }
+            tx.commit();
+            sendAnalyzeResult(exchange, true, checks);
+        } catch (simpledb.parse.SemanticError e) {
+            tx.rollback();
+            java.util.List<String> checks = new java.util.ArrayList<>();
+            checks.add("{\"name\":\"语义分析\",\"status\":\"fail\",\"message\":\"" + JsonHelper.escape(e.getMessage()) + "\"}");
+            sendAnalyzeResult(exchange, false, checks);
+        } catch (Exception e) {
+            tx.rollback();
+            java.util.List<String> checks = new java.util.ArrayList<>();
+            checks.add("{\"name\":\"语义分析\",\"status\":\"fail\",\"message\":\"" + JsonHelper.escape(e.getMessage()) + "\"}");
+            sendAnalyzeResult(exchange, false, checks);
+        }
+    }
+
+    private void sendAnalyzeResult(HttpExchange exchange, boolean success, java.util.List<String> checks) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"success\":").append(success).append(",\"checks\":[");
+        for (int i = 0; i < checks.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append(checks.get(i));
+        }
+        sb.append("]}");
+        sendJson(exchange, 200, sb.toString());
     }
 
     private void handleStats(HttpExchange exchange) throws IOException {
@@ -234,6 +423,20 @@ public class HttpApiServer {
             sendJson(exchange, 200, JsonHelper.toJsonColumns(tableName, columns));
         } catch (Exception e) {
             tx.rollback();
+            sendJson(exchange, 500, JsonHelper.error("ENGINE", e.getMessage(), 0, 0));
+        }
+    }
+
+    private void handleBufferSlots(HttpExchange exchange) throws IOException {
+        if (!"GET".equals(exchange.getRequestMethod())) {
+            sendError(exchange, 405, "Method not allowed");
+            return;
+        }
+        try {
+            BufferManager bm = db.getBufferManager();
+            List<BufferManager.SlotInfo> slots = bm.getBufferSlots();
+            sendJson(exchange, 200, JsonHelper.toJsonBufferSlots(slots));
+        } catch (Exception e) {
             sendJson(exchange, 500, JsonHelper.error("ENGINE", e.getMessage(), 0, 0));
         }
     }

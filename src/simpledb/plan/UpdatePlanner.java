@@ -1,7 +1,7 @@
 package simpledb.plan;
 
 import simpledb.tx.Transaction;
-import simpledb.parse.*;
+import simpledb.ast.*;
 
 /**
  * The interface implemented by the planners
@@ -9,7 +9,7 @@ import simpledb.parse.*;
  * @author Edward Sciore
  */
 public interface UpdatePlanner {
-   
+
    /**
     * Executes the specified insert statement, and
     * returns the number of affected records.
@@ -17,8 +17,8 @@ public interface UpdatePlanner {
     * @param tx the calling transaction
     * @return the number of affected records
     */
-   public int executeInsert(InsertData data, Transaction tx);
-   
+   public int executeInsert(InsertNode data, Transaction tx);
+
    /**
     * Executes the specified delete statement, and
     * returns the number of affected records.
@@ -26,8 +26,8 @@ public interface UpdatePlanner {
     * @param tx the calling transaction
     * @return the number of affected records
     */
-   public int executeDelete(DeleteData data, Transaction tx);
-   
+   public int executeDelete(DeleteNode data, Transaction tx);
+
    /**
     * Executes the specified modify statement, and
     * returns the number of affected records.
@@ -35,8 +35,8 @@ public interface UpdatePlanner {
     * @param tx the calling transaction
     * @return the number of affected records
     */
-   public int executeModify(ModifyData data, Transaction tx);
-   
+   public int executeModify(UpdateNode data, Transaction tx);
+
    /**
     * Executes the specified create table statement, and
     * returns the number of affected records.
@@ -44,8 +44,8 @@ public interface UpdatePlanner {
     * @param tx the calling transaction
     * @return the number of affected records
     */
-   public int executeCreateTable(CreateTableData data, Transaction tx);
-   
+   public int executeCreateTable(CreateTableNode data, Transaction tx);
+
    /**
     * Executes the specified create view statement, and
     * returns the number of affected records.
@@ -53,8 +53,8 @@ public interface UpdatePlanner {
     * @param tx the calling transaction
     * @return the number of affected records
     */
-   public int executeCreateView(CreateViewData data, Transaction tx);
-   
+   public int executeCreateView(CreateViewNode data, Transaction tx);
+
    /**
     * Executes the specified create index statement, and
     * returns the number of affected records.
@@ -62,5 +62,14 @@ public interface UpdatePlanner {
     * @param tx the calling transaction
     * @return the number of affected records
     */
-   public int executeCreateIndex(CreateIndexData data, Transaction tx);
+   public int executeCreateIndex(CreateIndexNode data, Transaction tx);
+
+   /**
+    * Executes the specified drop table statement, and
+    * returns the number of affected records.
+    * @param data the parsed representation of the drop table statement
+    * @param tx the calling transaction
+    * @return the number of affected records
+    */
+   public int executeDropTable(DropTableNode data, Transaction tx);
 }

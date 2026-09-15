@@ -2,7 +2,7 @@ package simpledb.plan;
 
 import java.util.Iterator;
 import simpledb.tx.Transaction;
-import simpledb.parse.*;
+import simpledb.ast.*;
 import simpledb.query.*;
 import simpledb.metadata.MetadataMgr;
 
@@ -12,12 +12,12 @@ import simpledb.metadata.MetadataMgr;
  */
 public class BasicUpdatePlanner implements UpdatePlanner {
    private MetadataMgr mdm;
-   
+
    public BasicUpdatePlanner(MetadataMgr mdm) {
       this.mdm = mdm;
    }
-   
-   public int executeDelete(DeleteData data, Transaction tx) {
+
+   public int executeDelete(DeleteNode data, Transaction tx) {
       Plan p = new TablePlan(tx, data.tableName(), mdm);
       p = new SelectPlan(p, data.pred());
       UpdateScan us = (UpdateScan) p.open();
@@ -29,8 +29,8 @@ public class BasicUpdatePlanner implements UpdatePlanner {
       us.close();
       return count;
    }
-   
-   public int executeModify(ModifyData data, Transaction tx) {
+
+   public int executeModify(UpdateNode data, Transaction tx) {
       Plan p = new TablePlan(tx, data.tableName(), mdm);
       p = new SelectPlan(p, data.pred());
       UpdateScan us = (UpdateScan) p.open();
@@ -43,31 +43,41 @@ public class BasicUpdatePlanner implements UpdatePlanner {
       us.close();
       return count;
    }
-   
-   public int executeInsert(InsertData data, Transaction tx) {
+
+   public int executeInsert(InsertNode data, Transaction tx) {
       Plan p = new TablePlan(tx, data.tableName(), mdm);
       UpdateScan us = (UpdateScan) p.open();
       us.insert();
+      java.util.List<String> fields = data.fields();
+      // 如果未指定列名，使用表的全部列（按 schema 顺序）
+      if (fields.isEmpty()) {
+         fields = new java.util.ArrayList<>(p.schema().fields());
+      }
       Iterator<Constant> iter = data.vals().iterator();
-      for (String fldname : data.fields()) {
+      for (String fldname : fields) {
          Constant val = iter.next();
          us.setVal(fldname, val);
       }
       us.close();
       return 1;
    }
-   
-   public int executeCreateTable(CreateTableData data, Transaction tx) {
+
+   public int executeCreateTable(CreateTableNode data, Transaction tx) {
       mdm.createTable(data.tableName(), data.newSchema(), tx);
       return 0;
    }
-   
-   public int executeCreateView(CreateViewData data, Transaction tx) {
+
+   public int executeCreateView(CreateViewNode data, Transaction tx) {
       mdm.createView(data.viewName(), data.viewDef(), tx);
       return 0;
    }
-   public int executeCreateIndex(CreateIndexData data, Transaction tx) {
+   public int executeCreateIndex(CreateIndexNode data, Transaction tx) {
       mdm.createIndex(data.indexName(), data.tableName(), data.fieldName(), tx);
-      return 0;  
+      return 0;
+   }
+
+   public int executeDropTable(DropTableNode data, Transaction tx) {
+      mdm.dropTable(data.tableName(), tx);
+      return 0;
    }
 }
