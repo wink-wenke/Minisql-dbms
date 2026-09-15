@@ -4,6 +4,8 @@ import simpledb.file.*;
 import simpledb.log.LogMgr;
 import simpledb.storage.CacheStats;
 import simpledb.storage.ReplacementPolicy;
+import java.util.ArrayList;
+import java.util.List;
 
 //缓冲区管理器，负责管理缓冲区池，提供缓冲区的分配和回收功能
 //决定哪个块进内存，哪个页被淘汰，何时刷盘
@@ -13,7 +15,7 @@ public class BufferMgr {
    private static final long MAX_TIME = 10000; // 10 seconds
    private ReplacementPolicy policy = ReplacementPolicy.LRU;
    private CacheStats stats = new CacheStats();
-   private static boolean debug = true;
+   private static boolean debug = false;
    
 
    //构造器，分配缓冲区
@@ -157,5 +159,41 @@ public class BufferMgr {
             System.out.println("EVICT " + (old != null ? old : "null") + " policy=" + policy);
       }
       return victim;
+   }
+
+   public static class SlotInfo {
+      public final int slotIndex;
+      public final String fileName;
+      public final int blockNumber;
+      public final int pinCount;
+      public final boolean dirty;
+      public final int txnum;
+
+      public SlotInfo(int slotIndex, String fileName, int blockNumber,
+                      int pinCount, boolean dirty, int txnum) {
+         this.slotIndex = slotIndex;
+         this.fileName = fileName;
+         this.blockNumber = blockNumber;
+         this.pinCount = pinCount;
+         this.dirty = dirty;
+         this.txnum = txnum;
+      }
+   }
+
+   public synchronized List<SlotInfo> getSlotInfoList() {
+      List<SlotInfo> list = new ArrayList<>();
+      for (int i = 0; i < bufferpool.length; i++) {
+         Buffer buf = bufferpool[i];
+         BlockId blk = buf.block();
+         list.add(new SlotInfo(
+            i,
+            blk != null ? blk.fileName() : null,
+            blk != null ? blk.number() : -1,
+            buf.pinCount(),
+            buf.isDirty(),
+            buf.modifyingTx()
+         ));
+      }
+      return list;
    }
 }

@@ -6,6 +6,7 @@ import simpledb.metadata.MetadataMgr;
 import simpledb.query.*;
 import simpledb.record.*;
 import simpledb.tx.Transaction;
+import simpledb.ast.*;
 
 import static java.sql.Types.*;
 
@@ -24,10 +25,10 @@ import static java.sql.Types.*;
  * 用法：
  * <pre>
  *   SemanticAnalyzer analyzer = new SemanticAnalyzer(mdm, tx);
- *   analyzer.analyzeQuery(queryData);
- *   analyzer.analyzeInsert(insertData);
- *   analyzer.analyzeDelete(deleteData);
- *   analyzer.analyzeUpdate(modifyData);
+ *   analyzer.analyzeQuery(selectNode);
+ *   analyzer.analyzeInsert(insertNode);
+ *   analyzer.analyzeDelete(deleteNode);
+ *   analyzer.analyzeUpdate(updateNode);
  * </pre>
  */
 public class SemanticAnalyzer {
@@ -46,7 +47,7 @@ public class SemanticAnalyzer {
     /**
      * 分析 SELECT 语句。
      */
-    public void analyzeQuery(QueryData data) {
+    public void analyzeQuery(SelectNode data) {
         // 1. 检查所有表是否存在，并收集 schema
         Schema combinedSchema = checkTablesAndGetSchema(data.tables());
 
@@ -65,7 +66,7 @@ public class SemanticAnalyzer {
     /**
      * 分析 INSERT 语句。
      */
-    public void analyzeInsert(InsertData data) {
+    public void analyzeInsert(InsertNode data) {
         // 1. 检查表是否存在
         Layout layout = checkTableExists(data.tableName());
         Schema schema = layout.schema();
@@ -73,6 +74,10 @@ public class SemanticAnalyzer {
         // 2. 检查列数是否匹配
         List<String> fields = data.fields();
         List<Constant> vals = data.vals();
+        // 如果未指定列名，使用表的全部列
+        if (fields.isEmpty()) {
+            fields = new ArrayList<>(schema.fields());
+        }
         if (fields.size() != vals.size()) {
             throw new SemanticError(
                     "INSERT 列数与值数不匹配：列数=" + fields.size() + ", 值数=" + vals.size());
@@ -94,7 +99,7 @@ public class SemanticAnalyzer {
     /**
      * 分析 DELETE 语句。
      */
-    public void analyzeDelete(DeleteData data) {
+    public void analyzeDelete(DeleteNode data) {
         // 1. 检查表是否存在
         Layout layout = checkTableExists(data.tableName());
         Schema schema = layout.schema();
@@ -106,7 +111,7 @@ public class SemanticAnalyzer {
     /**
      * 分析 UPDATE 语句。
      */
-    public void analyzeUpdate(ModifyData data) {
+    public void analyzeUpdate(UpdateNode data) {
         // 1. 检查表是否存在
         Layout layout = checkTableExists(data.tableName());
         Schema schema = layout.schema();
@@ -149,15 +154,15 @@ public class SemanticAnalyzer {
     /**
      * 通用分析入口：根据语句类型自动分派。
      */
-    public void analyze(Object stmt) {
-        if (stmt instanceof QueryData) {
-            analyzeQuery((QueryData) stmt);
-        } else if (stmt instanceof InsertData) {
-            analyzeInsert((InsertData) stmt);
-        } else if (stmt instanceof DeleteData) {
-            analyzeDelete((DeleteData) stmt);
-        } else if (stmt instanceof ModifyData) {
-            analyzeUpdate((ModifyData) stmt);
+    public void analyze(AstNode stmt) {
+        if (stmt instanceof SelectNode) {
+            analyzeQuery((SelectNode) stmt);
+        } else if (stmt instanceof InsertNode) {
+            analyzeInsert((InsertNode) stmt);
+        } else if (stmt instanceof DeleteNode) {
+            analyzeDelete((DeleteNode) stmt);
+        } else if (stmt instanceof UpdateNode) {
+            analyzeUpdate((UpdateNode) stmt);
         }
         // CREATE TABLE / VIEW / INDEX 不需要语义检查（新建对象）
     }

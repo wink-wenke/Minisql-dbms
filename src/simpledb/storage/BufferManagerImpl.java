@@ -4,6 +4,7 @@ import simpledb.file.BlockId;
 import simpledb.file.Page;
 import simpledb.buffer.Buffer;
 import simpledb.buffer.BufferMgr;
+import java.util.List;
 
 /**
  * BufferManager 的实现。包装升级后的 BufferMgr。
@@ -53,6 +54,17 @@ public class BufferManagerImpl implements BufferManager {
     @Override
     public void setReplacementPolicy(ReplacementPolicy policy) {
         bm.setReplacementPolicy(policy);
+    }
+
+    @Override
+    public List<SlotInfo> getBufferSlots() {
+        List<simpledb.buffer.BufferMgr.SlotInfo> raw = bm.getSlotInfoList();
+        List<SlotInfo> result = new java.util.ArrayList<>();
+        for (simpledb.buffer.BufferMgr.SlotInfo s : raw) {
+            result.add(new SlotInfo(s.slotIndex, s.fileName, s.blockNumber,
+                    s.pinCount, s.dirty, s.txnum));
+        }
+        return result;
     }
 
     private BlockId toBlockId(PageId pageId) {

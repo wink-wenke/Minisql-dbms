@@ -4,6 +4,7 @@ import java.util.*;
 import simpledb.tx.Transaction;
 import simpledb.metadata.*;
 import simpledb.parse.*;
+import simpledb.ast.*;
 import simpledb.materialize.SortPlan;
 
 /**
@@ -12,30 +13,31 @@ import simpledb.materialize.SortPlan;
  */
 public class BetterQueryPlanner implements QueryPlanner {
    private MetadataMgr mdm;
-   
+
    public BetterQueryPlanner(MetadataMgr mdm) {
       this.mdm = mdm;
    }
-   
+
    /**
     * Creates a query plan as follows.  It first takes
     * the product of all tables and views; it then selects on the predicate;
-    * and finally it projects on the field list. 
+    * and finally it projects on the field list.
     */
-   public Plan createPlan(QueryData data, Transaction tx) {
+   public Plan createPlan(AstNode astData, Transaction tx) {
+      SelectNode data = (SelectNode) astData;
       //Step 1: Create a plan for each mentioned table or view.
      List<Plan> plans = new ArrayList<Plan>();
       for (String tblname : data.tables()) {
          String viewdef = mdm.getViewDef(tblname, tx);
          if (viewdef != null) { // Recursively plan the view.
             Parser parser = new Parser(viewdef);
-            QueryData viewdata = parser.query();
+            SelectNode viewdata = parser.query();
             plans.add(createPlan(viewdata, tx));
          }
          else
             plans.add(new TablePlan(tx, tblname, mdm));
       }
-      
+
       //Step 2: Create the product of all table plans
       Plan p = plans.remove(0);
       for (Plan nextplan : plans) {
@@ -46,13 +48,13 @@ public class BetterQueryPlanner implements QueryPlanner {
             p = choice1;
          else
             p = choice2;
-      }            
-      
+      }
+
       //Step 3: Add a selection plan for the predicate
       p = new SelectPlan(p, data.pred());
-      
+
       //Step 4: Add ORDER BY sort plan (before projection, so sort field may not be selected)
-      List<String> orderby = data.orderby();
+      List<simpledb.ast.OrderByEntry> orderby = data.orderby();
       if (orderby != null && !orderby.isEmpty()) {
          p = new SortPlan(tx, p, orderby);
       }

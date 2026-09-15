@@ -25,6 +25,10 @@ public class MetadataMgr implements CatalogReader, CatalogWriter {
       tblmgr.createTable(tblname, sch, tx);
    }
 
+   public void dropTable(String tblname, Transaction tx) {
+      tblmgr.dropTable(tblname, tx);
+   }
+
    /**
     * CatalogWriter entry point. Translating ColumnDef into a Schema belongs
     * here, next to the catalog, instead of leaking page-level types into the

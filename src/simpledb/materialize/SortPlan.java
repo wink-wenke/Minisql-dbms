@@ -5,6 +5,7 @@ import simpledb.tx.Transaction;
 import simpledb.record.*;
 import simpledb.plan.Plan;
 import simpledb.query.*;
+import simpledb.ast.OrderByEntry;
 
 /**
  * The Plan class for the <i>sort</i> operator.
@@ -22,7 +23,7 @@ public class SortPlan implements Plan {
     * @param sortfields the fields to sort by
     * @param tx the calling transaction
     */
-   public SortPlan(Transaction tx, Plan p, List<String> sortfields) {
+   public SortPlan(Transaction tx, Plan p, List<OrderByEntry> sortfields) {
       this.tx = tx;
       this.p = p;
       sch = p.schema();
@@ -158,5 +159,5 @@ public class SortPlan implements Plan {
    public Transaction tx() { return tx; }
 
    /** 返回排序字段列表（供可视化使用）。 */
-   public List<String> sortFields() { return comp.sortFields(); }
+   public List<OrderByEntry> sortFields() { return comp.sortEntries(); }
 }

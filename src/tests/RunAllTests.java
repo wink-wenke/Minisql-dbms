@@ -1,6 +1,9 @@
 package tests;
 
 import java.util.*;
+import tests.storage.BufferMgrTest;
+import tests.storage.PageManagerTest;
+import tests.storage.BufferManagerImplTest;
 
 /**
  * Entry point for the engine test suites.
@@ -12,11 +15,9 @@ public class RunAllTests {
    public static void main(String[] args) {
       List<TestBase> suites = new ArrayList<>();
       // storage module unit tests
-      suites.add(new BlockIdTest());
-      suites.add(new PageTest());
-      suites.add(new CacheStatsTest());
       suites.add(new BufferMgrTest());
-      suites.add(new LogMgrTest());
+      suites.add(new PageManagerTest());
+      suites.add(new BufferManagerImplTest());
       // engine + integration tests
       suites.add(new ExecutorUnitTest());
       suites.add(new FullPipelineTest());

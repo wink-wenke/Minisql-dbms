@@ -5,6 +5,7 @@ import java.util.*;
 import simpledb.query.*;
 import simpledb.record.*;
 import simpledb.materialize.*;
+import simpledb.ast.*;
 
 /**
  * SQL 语法分析器（递归下降）。
@@ -25,8 +26,10 @@ import simpledb.materialize.*;
  */
 public class Parser {
     private Lexer lex;
+    private String originalSql;
 
     public Parser(String s) {
+        this.originalSql = s;
         lex = new Lexer(s);
     }
 
@@ -217,7 +220,7 @@ public class Parser {
     /**
      * 解析 SELECT 语句。
      */
-    public QueryData query() {
+    public SelectNode query() {
         lex.eatKeyword("select");
         List<String> fields = selectList();
         List<AggregationFn> aggfns = new ArrayList<>();
@@ -235,14 +238,14 @@ public class Parser {
             groupby = fieldList();
             aggfns = extractAggFns(fields, groupby);
         }
-        List<String> orderby = Collections.emptyList();
+        List<OrderByEntry> orderby = Collections.emptyList();
         if (lex.matchKeyword("order")) {
             lex.eatKeyword("order");
             lex.eatKeyword("by");
-            orderby = fieldList();
+            orderby = orderByList();
         }
         consumeEnd();
-        return new QueryData(fields, tables, pred, orderby, groupby, aggfns);
+        return new SelectNode(fields, tables, pred, orderby, groupby, aggfns);
     }
 
     private List<String> selectList() {
@@ -321,18 +324,33 @@ public class Parser {
     /**
      * 解析更新命令（INSERT / DELETE / UPDATE / CREATE）。
      */
-    public Object updateCmd() {
-        if (lex.matchKeyword("insert"))
+    public AstNode updateCmd() {
+        if (lex.matchKeyword("explain"))
+            return explain();
+        else if (lex.matchKeyword("insert"))
             return insert();
         else if (lex.matchKeyword("delete"))
             return delete();
         else if (lex.matchKeyword("update"))
             return modify();
+        else if (lex.matchKeyword("drop"))
+            return dropTable();
         else
             return create();
     }
 
-    private Object create() {
+    private ExplainNode explain() {
+        lex.eatKeyword("explain");
+        SelectNode sel = query();
+        // 从原始 SQL 中提取子查询部分（去掉 EXPLAIN 前缀和末尾分号）
+        String subSql = originalSql.trim();
+        if (subSql.toUpperCase().startsWith("EXPLAIN"))
+            subSql = subSql.substring(7).trim();
+        if (subSql.endsWith(";")) subSql = subSql.substring(0, subSql.length() - 1);
+        return new ExplainNode(sel, subSql);
+    }
+
+    private AstNode create() {
         lex.eatKeyword("create");
         if (lex.matchKeyword("table"))
             return createTable();
@@ -346,7 +364,7 @@ public class Parser {
     //  DELETE
     // =================================================================
 
-    public DeleteData delete() {
+    public DeleteNode delete() {
         lex.eatKeyword("delete");
         lex.eatKeyword("from");
         String tblname = lex.eatId();
@@ -356,26 +374,33 @@ public class Parser {
             pred = predicate();
         }
         consumeEnd();
-        return new DeleteData(tblname, pred);
+        return new DeleteNode(tblname, pred);
     }
 
     // =================================================================
     //  INSERT
     // =================================================================
 
-    public InsertData insert() {
+    public InsertNode insert() {
         lex.eatKeyword("insert");
         lex.eatKeyword("into");
         String tblname = lex.eatId();
-        lex.eatDelim('(');
-        List<String> flds = fieldList();
-        lex.eatDelim(')');
+        List<String> flds;
+        if (lex.matchDelim('(') && !lex.matchKeyword("values")) {
+            // INSERT INTO t(col1, col2) VALUES (...)
+            lex.eatDelim('(');
+            flds = fieldList();
+            lex.eatDelim(')');
+        } else {
+            // INSERT INTO t VALUES (...) — 无列名，稍后由 Planner 补全
+            flds = new ArrayList<>();
+        }
         lex.eatKeyword("values");
         lex.eatDelim('(');
         List<Constant> vals = constList();
         lex.eatDelim(')');
         consumeEnd();
-        return new InsertData(tblname, flds, vals);
+        return new InsertNode(tblname, flds, vals);
     }
 
     private List<String> fieldList() {
@@ -386,6 +411,29 @@ public class Parser {
             L.add(field());
         }
         return L;
+    }
+
+    private List<OrderByEntry> orderByList() {
+        List<OrderByEntry> L = new ArrayList<>();
+        L.add(orderByField());
+        while (lex.matchDelim(',')) {
+            lex.eatDelim(',');
+            L.add(orderByField());
+        }
+        return L;
+    }
+
+    private OrderByEntry orderByField() {
+        String fldname = field();
+        boolean ascending = true;
+        if (lex.matchKeyword("asc")) {
+            lex.eatKeyword("asc");
+            ascending = true;
+        } else if (lex.matchKeyword("desc")) {
+            lex.eatKeyword("desc");
+            ascending = false;
+        }
+        return new OrderByEntry(fldname, ascending);
     }
 
     private List<Constant> constList() {
@@ -402,7 +450,7 @@ public class Parser {
     //  UPDATE (MODIFY)
     // =================================================================
 
-    public ModifyData modify() {
+    public UpdateNode modify() {
         lex.eatKeyword("update");
         String tblname = lex.eatId();
         lex.eatKeyword("set");
@@ -415,21 +463,34 @@ public class Parser {
             pred = predicate();
         }
         consumeEnd();
-        return new ModifyData(tblname, fldname, newval, pred);
+        return new UpdateNode(tblname, fldname, newval, pred);
     }
 
     // =================================================================
     //  CREATE TABLE
     // =================================================================
 
-    public CreateTableData createTable() {
+    public CreateTableNode createTable() {
         lex.eatKeyword("table");
         String tblname = lex.eatId();
         lex.eatDelim('(');
         Schema sch = fieldDefs();
         lex.eatDelim(')');
         consumeEnd();
-        return new CreateTableData(tblname, sch);
+        return new CreateTableNode(tblname, sch);
+    }
+
+    public DropTableNode dropTable() {
+        lex.eatKeyword("drop");
+        lex.eatKeyword("table");
+        boolean ifExists = lex.matchKeyword("if");
+        if (ifExists) {
+            lex.eatKeyword("if");
+            lex.eatKeyword("exists");
+        }
+        String tblname = lex.eatId();
+        consumeEnd();
+        return new DropTableNode(tblname, ifExists);
     }
 
     private Schema fieldDefs() {
@@ -465,16 +526,16 @@ public class Parser {
     //  CREATE VIEW / INDEX
     // =================================================================
 
-    public CreateViewData createView() {
+    public CreateViewNode createView() {
         lex.eatKeyword("view");
         String viewname = lex.eatId();
         lex.eatKeyword("as");
-        QueryData qd = query();
+        SelectNode qd = query();
         consumeEnd();
-        return new CreateViewData(viewname, qd);
+        return new CreateViewNode(viewname, qd);
     }
 
-    public CreateIndexData createIndex() {
+    public CreateIndexNode createIndex() {
         lex.eatKeyword("index");
         String idxname = lex.eatId();
         lex.eatKeyword("on");
@@ -483,7 +544,7 @@ public class Parser {
         String fldname = field();
         lex.eatDelim(')');
         consumeEnd();
-        return new CreateIndexData(idxname, tblname, fldname);
+        return new CreateIndexNode(idxname, tblname, fldname);
     }
 
     // =================================================================

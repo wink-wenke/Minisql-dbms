@@ -1,64 +1,91 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import Topbar from './Topbar';
 
-const navItems = [
-  { to: '/', label: 'Architecture', icon: '◇' },
-  { to: '/playground', label: 'Playground', icon: '▶' },
-  { to: '/pipeline', label: 'Pipeline', icon: '→' },
-  { to: '/storage', label: 'Storage', icon: '▦' },
-  { to: '/tests', label: 'Tests', icon: '✓' },
-  { to: '/fuzz', label: 'Fuzz', icon: '⚡' },
+interface NavItem {
+  route: string;
+  label: string;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: '工作区',
+    items: [
+      { route: '/', label: '仪表盘' },
+      { route: '/console', label: 'SQL 控制台' },
+      { route: '/pipeline', label: '管道' },
+    ],
+  },
+  {
+    label: '数据库',
+    items: [
+      { route: '/storage', label: '存储' },
+    ],
+  },
+  {
+    label: '工具',
+    items: [
+      { route: '/tests', label: '测试' },
+      { route: '/history', label: '历史' },
+      { route: '/logs', label: '日志' },
+    ],
+  },
 ];
 
 export default function Layout() {
   return (
-    <div className="flex h-full">
-      {/* Sidebar */}
-      <aside className="w-56 flex-shrink-0 border-r border-border bg-bg-surface flex flex-col">
-        {/* Logo */}
-        <div className="px-4 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded bg-accent flex items-center justify-center text-bg-primary font-bold text-sm">
-              S
+    <div className="flex flex-col h-full">
+      {/* Top navigation bar — 48px */}
+      <header className="h-12 flex-shrink-0 border-b border-border bg-white/80 backdrop-blur-[12px] sticky top-0 z-50">
+        <div className="h-full flex items-center justify-between px-5">
+          {/* Left: Logo */}
+          <div className="flex items-center gap-2.5 flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg bg-accent/12 flex items-center justify-center">
+              <span className="text-accent font-mono text-xs font-bold">S</span>
             </div>
-            <div>
-              <div className="text-sm font-semibold text-text-primary">MiniSQL</div>
-              <div className="text-xs text-text-secondary">DBMS v1.0</div>
+            <div className="leading-tight">
+              <div className="text-[14px] font-bold text-text-primary tracking-tight">MiniSQL</div>
+              <div className="text-[10px] text-text-muted font-mono leading-none">Database Manager</div>
             </div>
           </div>
+
+          {/* Center: Navigation */}
+          <nav className="flex items-center justify-center gap-1.5 mx-6">
+            {navGroups.map((group, gi) => (
+              <div key={group.label} className="flex items-center gap-1">
+                {gi > 0 && (
+                  <span className="mx-1.5 text-border select-none text-xs">|</span>
+                )}
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.route}
+                    to={item.route}
+                    end={item.route === '/'}
+                    className={({ isActive }) =>
+                      `nav-item ${isActive ? 'nav-item--active' : ''}`
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+            ))}
+          </nav>
+
+          {/* Right: Status + Version */}
+          <Topbar />
         </div>
+      </header>
 
-        {/* Navigation */}
-        <nav className="flex-1 py-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-2 mx-2 rounded text-sm transition-colors ${
-                  isActive
-                    ? 'bg-accent/10 text-accent border-l-2 border-accent'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                }`
-              }
-            >
-              <span className="font-mono text-xs w-4 text-center">{item.icon}</span>
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Footer */}
-        <div className="px-4 py-3 border-t border-border">
-          <div className="text-xs text-text-muted font-mono">
-            SimpleDB 3.4
-          </div>
+      {/* Content area — fills remaining viewport */}
+      <main className="flex-1 overflow-auto">
+        <div className="px-6 py-5 h-full">
+          <Outlet />
         </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Outlet />
       </main>
     </div>
   );

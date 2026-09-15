@@ -1,25 +1,32 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
-import Architecture from './pages/Architecture';
-import Playground from './pages/Playground';
+import ErrorBoundary from './components/ErrorBoundary';
+import Dashboard from './pages/Dashboard';
+import Console from './pages/Console';
 import Pipeline from './pages/Pipeline';
 import Storage from './pages/Storage';
 import Tests from './pages/Tests';
-import FuzzDashboard from './pages/FuzzDashboard';
+import History from './pages/History';
+import Logs from './pages/Logs';
+import NotFound from './pages/NotFound';
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Architecture />} />
-          <Route path="/playground" element={<Playground />} />
-          <Route path="/pipeline" element={<Pipeline />} />
-          <Route path="/storage" element={<Storage />} />
-          <Route path="/tests" element={<Tests />} />
-          <Route path="/fuzz" element={<FuzzDashboard />} />
-        </Route>
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/console" element={<Console />} />
+            <Route path="/pipeline" element={<Pipeline />} />
+            <Route path="/storage" element={<Storage />} />
+            <Route path="/tests" element={<Tests />} />
+            <Route path="/history" element={<History />} />
+            <Route path="/logs" element={<Logs />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

@@ -18,7 +18,9 @@ public class GroupByPlan implements Plan {
    private Schema sch = new Schema();
    
    public GroupByPlan(Transaction tx, Plan p, List<String> groupfields, List<AggregationFn> aggfns) {
-      this.p = new SortPlan(tx, p, groupfields);
+      List<simpledb.ast.OrderByEntry> sortEntries = new ArrayList<>();
+      for (String f : groupfields) sortEntries.add(new simpledb.ast.OrderByEntry(f, true));
+      this.p = new SortPlan(tx, p, sortEntries);
       this.groupfields = groupfields;
       this.aggfns = aggfns;
       for (String fldname : groupfields)

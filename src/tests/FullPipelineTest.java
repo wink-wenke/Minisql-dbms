@@ -11,6 +11,7 @@ import simpledb.server.SimpleDB;
 import simpledb.shared.*;
 import simpledb.storage.CacheStats;
 import simpledb.tx.Transaction;
+import tests.TestCleanup;
 
 /**
  * Full pipeline integration test.
@@ -30,6 +31,8 @@ public class FullPipelineTest extends TestBase {
 
    protected void cases() throws Exception {
       resetDatabase(DB);
+        TestCleanup.init();
+      SimpleDB.DB_BASE_DIR = "tmp";
       SimpleDB db = new SimpleDB(DB);
       MetadataMgr mdm = db.mdMgr();
       Transaction tx = db.newTx();

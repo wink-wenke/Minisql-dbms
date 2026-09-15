@@ -14,7 +14,7 @@ import simpledb.shared.*;
  * previously-created table.
  * @author Edward Sciore
  */
-class TableMgr {
+public class TableMgr {
    // The max characters a tablename or fieldname can have.
    public static final int MAX_NAME = 16;
    private Layout tcatLayout, fcatLayout;
@@ -130,6 +130,27 @@ class TableMgr {
       } finally {
          tcat.close();
       }
+   }
+
+   public void dropTable(String tblname, Transaction tx) {
+      // delete from tblcat
+      TableScan tcat = new TableScan(tx, "tblcat", tcatLayout);
+      while (tcat.next()) {
+         if (tcat.getString("tblname").equals(tblname)) {
+            tcat.delete();
+            break;
+         }
+      }
+      tcat.close();
+
+      // delete from fldcat
+      TableScan fcat = new TableScan(tx, "fldcat", fcatLayout);
+      while (fcat.next()) {
+         if (fcat.getString("tblname").equals(tblname)) {
+            fcat.delete();
+         }
+      }
+      fcat.close();
    }
 
    public boolean columnExists(String tblname, String fldname, Transaction tx) {

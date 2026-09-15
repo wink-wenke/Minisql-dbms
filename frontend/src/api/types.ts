@@ -35,6 +35,19 @@ export interface ExplainResponse {
   error?: { type: string; message: string };
 }
 
+export interface AstNode {
+  type: string;
+  label: string;
+  children?: AstNode[];
+  detail?: string;
+}
+
+export interface AstResponse {
+  ast: AstNode;
+  type: string;
+  error?: { type: string; message: string; line?: number; column?: number };
+}
+
 export interface CacheStats {
   accessCount: number;
   hitCount: number;
@@ -45,7 +58,7 @@ export interface CacheStats {
 
 export interface StatsResponse {
   cache: CacheStats;
-  tables: string[];
+  tables: { tables: string[] } | string[];
   pageSize: number;
   bufferSize: number;
 }
@@ -59,4 +72,29 @@ export interface ColumnInfo {
 export interface SchemaResponse {
   table: string;
   columns: ColumnInfo[];
+}
+
+export interface BufferSlotInfo {
+  slot: number;
+  file: string | null;
+  block: number;
+  pins: number;
+  dirty: boolean;
+  txnum: number;
+}
+
+export interface BufferSlotsResponse {
+  slots: BufferSlotInfo[];
+}
+
+export interface AnalyzeCheck {
+  name: string;
+  status: 'pass' | 'fail';
+  message: string;
+}
+
+export interface AnalyzeResponse {
+  success: boolean;
+  checks: AnalyzeCheck[];
+  error?: { type: string; message: string };
 }

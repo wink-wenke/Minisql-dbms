@@ -61,6 +61,8 @@ Thumbs.db
 studentdb/
 fullpipelinedb/
 persistdb/
+e2etest/
+semantictest/
 bufmgr_test_tmp/
 
 # Build output

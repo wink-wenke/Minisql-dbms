@@ -12,6 +12,7 @@ public enum TokenType {
     CREATE, TABLE, VIEW, AS, INDEX, ON, ORDER, BY, GROUP,
     INT, VARCHAR,
     NULL,
+    EXPLAIN, ASC, DESC,
 
     // 字面量
     INT_CONST,      // 整数常量，如 42

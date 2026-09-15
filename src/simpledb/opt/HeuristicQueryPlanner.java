@@ -3,7 +3,8 @@ package simpledb.opt;
 import java.util.*;
 import simpledb.tx.Transaction;
 import simpledb.metadata.MetadataMgr;
-import simpledb.parse.QueryData;
+import simpledb.ast.SelectNode;
+import simpledb.ast.AstNode;
 import simpledb.plan.*;
 import simpledb.materialize.SortPlan;
 
@@ -14,11 +15,11 @@ import simpledb.materialize.SortPlan;
 public class HeuristicQueryPlanner implements QueryPlanner {
    private Collection<TablePlanner> tableplanners = new ArrayList<>();
    private MetadataMgr mdm;
-   
+
    public HeuristicQueryPlanner(MetadataMgr mdm) {
       this.mdm = mdm;
    }
-   
+
    /**
     * Creates an optimized left-deep query plan using the following
     * heuristics.
@@ -27,17 +28,18 @@ public class HeuristicQueryPlanner implements QueryPlanner {
     * H2. Add the table to the join order which
     * results in the smallest output.
     */
-   public Plan createPlan(QueryData data, Transaction tx) {
-      
+   public Plan createPlan(AstNode astData, Transaction tx) {
+      SelectNode data = (SelectNode) astData;
+
       // Step 1:  Create a TablePlanner object for each mentioned table
       for (String tblname : data.tables()) {
          TablePlanner tp = new TablePlanner(tblname, data.pred(), tx, mdm);
          tableplanners.add(tp);
       }
-      
+
       // Step 2:  Choose the lowest-size plan to begin the join order
       Plan currentplan = getLowestSelectPlan();
-      
+
       // Step 3:  Repeatedly add a plan to the join order
       while (!tableplanners.isEmpty()) {
          Plan p = getLowestJoinPlan(currentplan);
@@ -46,10 +48,10 @@ public class HeuristicQueryPlanner implements QueryPlanner {
          else  // no applicable join
             currentplan = getLowestProductPlan(currentplan);
       }
-      
+
       // Step 4.  Project on the field names and return
       // Add ORDER BY sort plan (before projection)
-      List<String> orderby = data.orderby();
+      List<simpledb.ast.OrderByEntry> orderby = data.orderby();
       if (orderby != null && !orderby.isEmpty()) {
          currentplan = new SortPlan(tx, currentplan, orderby);
       }
@@ -61,7 +63,7 @@ public class HeuristicQueryPlanner implements QueryPlanner {
       }
       return new ProjectPlan(currentplan, fields);
    }
-   
+
    private Plan getLowestSelectPlan() {
       TablePlanner besttp = null;
       Plan bestplan = null;
@@ -75,7 +77,7 @@ public class HeuristicQueryPlanner implements QueryPlanner {
       tableplanners.remove(besttp);
       return bestplan;
    }
-   
+
    private Plan getLowestJoinPlan(Plan current) {
       TablePlanner besttp = null;
       Plan bestplan = null;
@@ -90,7 +92,7 @@ public class HeuristicQueryPlanner implements QueryPlanner {
          tableplanners.remove(besttp);
       return bestplan;
    }
-   
+
    private Plan getLowestProductPlan(Plan current) {
       TablePlanner besttp = null;
       Plan bestplan = null;

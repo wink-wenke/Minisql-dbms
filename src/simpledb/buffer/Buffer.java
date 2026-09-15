@@ -82,6 +82,15 @@ public class Buffer {
    void unpin() {
       pins--;
    }
+
+   public int pinCount() {
+      return pins;
+   }
+
+   public boolean isDirty() {
+      return txnum >= 0;
+   }
+
    long lastAccessTime() {
       return lastAccessTime;
    }
